@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Constants.h"
-#include "Time.h"
+#include "time.h"
 #include "Tempo.h"
 
 OFX_ALS_BEGIN_NAMESPACE
