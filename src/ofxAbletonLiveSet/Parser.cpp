@@ -29,6 +29,7 @@ bool Parser::open(const string& path){
 	parseTempo(doc);
 	parseMidiTrack(doc);
 	parseLocator(doc);
+	parseAudioTrack(doc);
 	
 	LS.loadedFile=path;
 	
@@ -252,6 +253,66 @@ void Parser::parse(MidiClip& MC, const pugi::xml_node &node, RealTime offset){
 	{ // todo: extract floatEvents boolEvents from midiTrack plugins ?
 		// /Tracks/MidiTrack/DeviceChain/DeviceChain/Devices/PluginDevice/ParameterList
 	}
+}
+
+//
+
+void Parser::parseAudioTrack(const pugi::xml_document& doc){
+	pugi::xpath_query q("//Tracks/AudioTrack");
+	pugi::xpath_node_set nodes = q.evaluate_node_set(doc);
+	
+	LS.audiotracks.clear();
+	
+	for (int i = 0; i < nodes.size(); i++){
+		AudioTrack AT;
+		parse(AT, nodes[i].node(), 0);
+		LS.audiotracks.push_back(AT);
+	}
+}
+
+void Parser::parse(AudioTrack& AT, const pugi::xml_node &node, RealTime offset) {
+	AT.name = node.child("Name").child("EffectiveName").attribute("Value").value();
+	AT.color = node.child("ColorIndex").attribute("Value").as_int();
+	
+	pugi::xpath_query q(".//ArrangerAutomation/Events/AudioClip");
+	pugi::xpath_node_set nodes = q.evaluate_node_set(node);
+	
+	// AudioTrack/DeviceChain/MainSequencer/Sample/ArrangerAutomation/Events/AudioClip
+	
+	AT.clips.clear();
+	
+	for (int i = 0; i < nodes.size(); i++){
+		AudioClip AC;
+		parse(AC, nodes[i].node(), 0);
+		AT.clips.push_back(AC);
+	}
+	
+	std:sort(AT.clips.begin(), AT.clips.end(), sort_by_time<AudioClip>);
+}
+
+void Parser::parse(AudioClip& AC, const pugi::xml_node &node, RealTime offset){
+	
+	// /CurrentStart
+	// /CurrentEnd
+	// /TimeSignature
+	// /Name
+	// /ColorIndex
+	
+	float start = node.child("CurrentStart").attribute("Value").as_float();
+	float end = node.child("CurrentEnd").attribute("Value").as_float();
+	
+	
+	AC.time = LS.tempo.toRealTime(start) + offset;
+	AC.endtime = LS.tempo.toRealTime(end) + offset;
+	AC.duration = AC.endtime - AC.time;
+	
+	AC.color = node.child("ColorIndex").attribute("Value").as_int();
+	AC.name = node.child("Name").attribute("Value").value();
+	//MC.annotation = node.child("Annotation").attribute("Value").value();
+	
+	// extract loop setting
+	//parse(MC.loop, node.child("Loop"), AC.time);
+	
 }
 
 //

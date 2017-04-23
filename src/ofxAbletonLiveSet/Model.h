@@ -59,6 +59,17 @@ struct MidiClip {
 	vector<Automation> envelopes;
 };
 
+struct AudioClip {
+	Time time;
+	Time endtime;
+	Time duration;
+	
+	string name;
+	//string annotation;
+	int color;
+
+};
+
 struct Track {
 	string name;
 	int color;
@@ -67,6 +78,13 @@ struct Track {
 struct MidiTrack : public Track {
 	TimeSignature timeSignature;
 	vector<MidiClip> clips;
+};
+
+struct AudioTrack : public Track {
+	//TimeSignature timeSignature;
+	Time startTime;
+	Time endTime;
+	vector<AudioClip> clips;
 };
 
 struct Locator {
@@ -86,6 +104,7 @@ struct LiveSet {
 	Tempo tempo;
 	vector<Locator> locators;
 	vector<MidiTrack> miditracks;
+	vector<AudioTrack> audiotracks;
 };
 
 struct LSNoteEvent {

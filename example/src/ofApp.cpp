@@ -45,6 +45,21 @@ public:
 			cout << "Locator Time: " << L.time << endl;
 		}
 		
+		// AudioTracks
+		for (int i = 0; i < LS.audiotracks.size(); i++)
+		{
+			const ofxAbletonLiveSet::AudioTrack &T = LS.audiotracks.at(i);
+			cout << "AudioTrack Name: " << T.name << endl;
+			
+			for (int j = 0; j < T.clips.size(); j++)
+			{
+				const ofxAbletonLiveSet::AudioClip& m = T.clips.at(j);
+				cout << "AudioClip Name: " << m.name << " (Time: " << m.time << " ->\t" << m.duration << endl;
+			}
+			
+			cout << "===" << endl << endl;
+		}
+		
 		ofExit();
 	}
 	

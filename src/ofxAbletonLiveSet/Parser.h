@@ -44,6 +44,12 @@ private:
 	//
 	// todo: parse AudioTrack ? (not much insteresting information...)
 	//
+	void parseAudioTrack(const pugi::xml_document& doc);
+	
+	void parse(AudioTrack& AT, const pugi::xml_node &node, RealTime offset);
+	
+	void parse(AudioClip& AC, const pugi::xml_node &node, RealTime offset);
+	//
 
 	void parseLocator(const pugi::xml_document& doc);
 	
