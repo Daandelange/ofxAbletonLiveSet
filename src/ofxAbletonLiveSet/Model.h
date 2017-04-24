@@ -118,6 +118,15 @@ struct LSNoteEvent {
 	Note note;
 };
 
+struct LSTrackEvent {
+	LSTrackEvent(string _trackName, AudioClip _audioClip, int _nthTrack, int _nthClipInTrack) : audioClip(_audioClip), trackName(_trackName), nthTrack(_nthTrack), nthClipInTrack(_nthClipInTrack) {};
+	
+	string trackName;
+	int nthTrack;
+	int nthClipInTrack;
+	AudioClip audioClip;
+};
+
 struct LSMetronomEvent {
 	int barTime;
 	float realTime;

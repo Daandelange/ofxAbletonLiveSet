@@ -7,6 +7,7 @@ public:
 
 	void setup();
 	void noteEventListener( ofx::AbletonLiveSet::LSNoteEvent & noteEvent );
+	void trackEventListener( ofx::AbletonLiveSet::LSTrackEvent & trackEvent );
 	void metronomEventListener( ofx::AbletonLiveSet::LSMetronomEvent & metronomEvent );
 	
 private:

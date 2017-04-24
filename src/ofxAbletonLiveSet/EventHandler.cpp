@@ -3,6 +3,7 @@
 // prototype seems to be needed for static ofEvents
 ofEvent<ofx::AbletonLiveSet::LSNoteEvent> ofx::AbletonLiveSet::EventHandler::noteEvent;
 ofEvent<ofx::AbletonLiveSet::LSMetronomEvent> ofx::AbletonLiveSet::EventHandler::metronomEvent;
+ofEvent<ofx::AbletonLiveSet::LSTrackEvent> ofx::AbletonLiveSet::EventHandler::trackEvent;
 
 OFX_ALS_BEGIN_NAMESPACE
 
@@ -65,7 +66,6 @@ void EventHandler::fireNextNoteEvents(Poco::Timestamp::TimeDiff curTime){
 		if(LSNoteEvents[i].note.time*1000000 > curTime) break;
 	}
 }
-
 //
 bool EventHandler::parseNoteEvents( LiveSet& LS ){
 	
@@ -99,6 +99,73 @@ bool EventHandler::parseNoteEvents( LiveSet& LS ){
 		}
 	}
 	std:sort(LSNoteEvents.begin(), LSNoteEvents.end(), sort_by_time<LSNoteEvent>);
+	
+	return true;
+}
+
+bool EventHandler::enableTrackEvents(  ){
+	if( LSTrackEvents.size() < 1 ) return false;
+	
+	startThreadedTimer();
+	
+	currentTrackEventIndex = 0;
+	
+	bTrackEvents = true;
+	
+	return true;
+}
+
+bool EventHandler::enableTrackEvents(ofx::AbletonLiveSet::LiveSet &LS){
+	parseTrackEvents(LS);
+	enableTrackEvents();
+}
+
+
+
+void EventHandler::fireNextTrackEvents(Poco::Timestamp::TimeDiff curTime){
+	if(LSTrackEvents.size() < currentTrackEventIndex) return;
+	
+	// stopWatch.elapsed() is in milliseconds
+	// Track.time is in seconds
+	
+	for(int i=currentTrackEventIndex; i<LSTrackEvents.size(); i++){
+		if(curTime >= LSTrackEvents[i].audioClip.time*1000000){
+			// fire the event!
+			ofNotifyEvent( trackEvent, LSTrackEvents[i] );
+			
+			// remember
+			currentTrackEventIndex=i+1;
+		}
+		// interrupt for loop ?
+		if(LSTrackEvents[i].audioClip.time*1000000 > curTime) break;
+	}
+}
+
+//
+bool EventHandler::parseTrackEvents( LiveSet& LS ){
+	
+	// ALS loaded ?
+	if( !LS.isLoaded() ){
+		ofLogNotice("OfxAbletonLiveSet::EventHandler::parseTrackEvents()", "before parsing events, make sure to parse() a live set.");
+		return false;
+	}
+	
+	// clean up
+	LSTrackEvents.clear();
+	
+	// loop trough LS data
+	for (int trackNb = 0; trackNb < LS.audiotracks.size(); trackNb++){
+		
+		for(int clipNb=0; clipNb < LS.audiotracks[trackNb].clips.size(); clipNb++){
+				
+			LSTrackEvent trackEvent( LS.audiotracks[trackNb].name, LS.audiotracks[trackNb].clips[clipNb], trackNb, clipNb );
+			
+			LSTrackEvents.push_back(trackEvent);
+			
+			clipNb ++;
+		}
+	}
+	std:sort(LSTrackEvents.begin(), LSTrackEvents.end(), sort_by_audio_clip_time<LSTrackEvent>);
 	
 	return true;
 }
@@ -175,6 +242,10 @@ void EventHandler::threadedTimerTick(Timer& timer){
 	if(bMetronomEvents){
 		//if( stopWatch.elapsed() >= nextMetronomEvent )
 		fireNextMetronomEvents( stopWatch.elapsed() );
+	}
+	if(bTrackEvents){
+		//if( stopWatch.elapsed() >= nextMetronomEvent )
+		fireNextTrackEvents( stopWatch.elapsed() );
 	}
 	
 	return;

@@ -49,19 +49,40 @@ void ofApp::setup(){
 		cout << "Locator Time: " << L.time << endl;
 	}
 	
+	// AudioTracks
+	for (int i = 0; i < LS.audiotracks.size(); i++)
+	{
+		const ofxAbletonLiveSet::AudioTrack &T = LS.audiotracks.at(i);
+		cout << "AudioTrack Name: " << T.name << endl;
+		
+		for (int j = 0; j < T.clips.size(); j++)
+		{
+			const ofxAbletonLiveSet::AudioClip& m = T.clips.at(j);
+			cout << "AudioClip Name: " << m.name << " (Time: " << m.time << " ->\t" << m.duration << endl;
+		}
+		
+		cout << "===" << endl << endl;
+	}
+	
 	// listen to als events
 	ofAddListener(ofx::AbletonLiveSet::EventHandler::noteEvent, this, &ofApp::noteEventListener);
+	ofAddListener(ofx::AbletonLiveSet::EventHandler::trackEvent, this, &ofApp::trackEventListener);
 	ofAddListener(ofx::AbletonLiveSet::EventHandler::metronomEvent, this, &ofApp::metronomEventListener);
 	
 	// enable als events
-	eventHandler.enableNoteEvents(LS);
-	eventHandler.enableMetronomEvents(LS);
+	//eventHandler.enableNoteEvents(LS);
+	eventHandler.enableTrackEvents(LS);
+	//eventHandler.enableMetronomEvents(LS);
 	
 	//ofExit();
 }
 
 void ofApp::noteEventListener(ofx::AbletonLiveSet::LSNoteEvent & noteEvent){
 	cout << "New Note Event: " << noteEvent.note.key << " @ " << noteEvent.note.time << endl;
+}
+
+void ofApp::trackEventListener(ofx::AbletonLiveSet::LSTrackEvent &trackEvent){
+	cout << "New Track Event: " << trackEvent.trackName << " @ " << trackEvent.audioClip.time << " : " << trackEvent.audioClip.name << endl;
 }
 
 void ofApp::metronomEventListener(ofx::AbletonLiveSet::LSMetronomEvent &metronomEvent){
