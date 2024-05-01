@@ -17,13 +17,22 @@ bool Parser::open(const string& path){
 	if( extension == "als" || extension == "ALS") {
 		gzipped = true;
 		Poco::InflatingInputStream inflater(ifs, Poco::InflatingStreamBuf::STREAM_GZIP);
-		if (!inflater) return false;
+		if (!inflater){
+			ofLogNotice("ofxAbletonLiveSet") << "Couldn't decompress ALS file `" << path << "`.";
+			return false;
+		}
 		
-		if (!doc.load(inflater)) return false;
+		if (!doc.load(inflater)){
+			ofLogNotice("ofxAbletonLiveSet") << "Couldn't load XML contents of file `" << path << "`.";
+			return false;
+		}
 	}
 	else {
 #endif
-		if(!doc.load(ifs)) return false;
+		if(!doc.load(ifs)){
+			ofLogNotice("ofxAbletonLiveSet") << "Couldn't load XML contents of file `" << path << "`.";
+			return false;
+		}
 #ifndef OFX_ALS_WITHOUT_POCO
 	}
 	
