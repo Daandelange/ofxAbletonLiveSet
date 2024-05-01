@@ -43,7 +43,7 @@ void Tempo::updateTempoMap(const map<BarTime, float>& data, float default_tempo)
 	
 	globalTempo = default_tempo;
 	
-	if (events.size() == 1){
+	if (events.size() <= 1){
 		timemap = new SimpleTimemap(default_tempo);
 	}
 	else{

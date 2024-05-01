@@ -58,8 +58,9 @@ private:
 	bool bTrackEvents = false;
 	bool bMetronomEvents = false;
 	
-	int currentNoteEventIndex = 0;
-	int currentTrackEventIndex = 0;
+	std::size_t currentNoteEventIndex = 0;
+	std::size_t currentTrackEventIndex = 0;
+
 #ifndef OFX_ALS_WITHOUT_POCO
 	vector<Poco::Timestamp::TimeDiff> nextMetronomEvent;
 #endif

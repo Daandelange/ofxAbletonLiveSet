@@ -49,8 +49,9 @@ bool EventHandler::enableNoteEvents(  ){
 }
 
 bool EventHandler::enableNoteEvents(ofx::AbletonLiveSet::LiveSet &LS){
-	parseNoteEvents(LS);
-	enableNoteEvents();
+	bool ret = parseNoteEvents(LS);
+	ret *= enableNoteEvents();
+	return ret;
 }
 
 
@@ -125,8 +126,9 @@ bool EventHandler::enableTrackEvents(  ){
 }
 
 bool EventHandler::enableTrackEvents(ofx::AbletonLiveSet::LiveSet &LS){
-	parseTrackEvents(LS);
-	enableTrackEvents();
+	bool ret = parseTrackEvents(LS);
+	ret *= enableTrackEvents();
+	return ret;
 }
 
 
@@ -172,7 +174,6 @@ bool EventHandler::parseTrackEvents( LiveSet& LS ){
 			
 			LSTrackEvents.push_back(trackEvent);
 			
-			clipNb ++;
 		}
 	}
 	std:sort(LSTrackEvents.begin(), LSTrackEvents.end(), sort_by_audio_clip_time<LSTrackEvent>);
