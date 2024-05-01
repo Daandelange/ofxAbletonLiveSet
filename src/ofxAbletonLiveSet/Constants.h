@@ -1,7 +1,7 @@
 #pragma once
 
 #include "ofMain.h"
-#include "pugixml.hpp"
+#include "ofxAlsPugi.h"
 
 #define OFX_ALS_BEGIN_NAMESPACE namespace ofx { namespace AbletonLiveSet {
 #define OFX_ALS_END_NAMESPACE } }
