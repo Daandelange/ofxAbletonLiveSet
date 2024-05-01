@@ -8,15 +8,20 @@ ofEvent<ofx::AbletonLiveSet::LSTrackEvent> ofx::AbletonLiveSet::EventHandler::tr
 OFX_ALS_BEGIN_NAMESPACE
 
 EventHandler::~EventHandler(){
+#ifndef OFX_ALS_WITHOUT_POCO
 	delete timer;
+#endif
 }
 
 EventHandler::EventHandler(){
+#ifndef OFX_ALS_WITHOUT_POCO
 	timer = new Timer(0, 10);
+#endif
 	LSNoteEvents.clear();
 }
 
 void EventHandler::startThreadedTimer(){
+#ifndef OFX_ALS_WITHOUT_POCO
 	// already started?
 	if(stopWatch.elapsed()>0) return;
 	
@@ -26,8 +31,10 @@ void EventHandler::startThreadedTimer(){
 	
 	timer->start(TimerCallback<EventHandler>(*this, &EventHandler::threadedTimerTick ), Thread::PRIO_HIGHEST);
 	stopWatch.start();
+#endif
 }
 
+#ifndef OFX_ALS_WITHOUT_POCO
 //template <class ListenerClass>
 bool EventHandler::enableNoteEvents(  ){
 	if( LSNoteEvents.size() < 1 ) return false;
@@ -66,6 +73,7 @@ void EventHandler::fireNextNoteEvents(Poco::Timestamp::TimeDiff curTime){
 		if(LSNoteEvents[i].note.time*1000000 > curTime) break;
 	}
 }
+#endif
 //
 bool EventHandler::parseNoteEvents( LiveSet& LS ){
 	
@@ -103,6 +111,7 @@ bool EventHandler::parseNoteEvents( LiveSet& LS ){
 	return true;
 }
 
+#ifndef OFX_ALS_WITHOUT_POCO
 bool EventHandler::enableTrackEvents(  ){
 	if( LSTrackEvents.size() < 1 ) return false;
 	
@@ -140,6 +149,7 @@ void EventHandler::fireNextTrackEvents(Poco::Timestamp::TimeDiff curTime){
 		if(LSTrackEvents[i].audioClip.time*1000000 > curTime) break;
 	}
 }
+#endif
 
 //
 bool EventHandler::parseTrackEvents( LiveSet& LS ){
@@ -170,6 +180,7 @@ bool EventHandler::parseTrackEvents( LiveSet& LS ){
 	return true;
 }
 
+#ifndef OFX_ALS_WITHOUT_POCO
 bool EventHandler::enableMetronomEvents(){
 	startThreadedTimer();
 	
@@ -185,6 +196,7 @@ bool EventHandler::enableMetronomEvents(ofx::AbletonLiveSet::LiveSet &LS){
 	
 	return parseMetronomEvents(LS) && enableMetronomEvents();
 }
+#endif
 
 bool EventHandler::parseMetronomEvents(ofx::AbletonLiveSet::LiveSet &LS){
 	
@@ -206,6 +218,7 @@ bool EventHandler::parseMetronomEvents(ofx::AbletonLiveSet::LiveSet &LS){
 	return true;
 }
 
+#ifndef OFX_ALS_WITHOUT_POCO
 void EventHandler::fireNextMetronomEvents(Poco::Timestamp::TimeDiff curTime){
 	
 	// todo: the system can only handle 1 metronom for now...
@@ -250,5 +263,6 @@ void EventHandler::threadedTimerTick(Timer& timer){
 	
 	return;
 }
+#endif
 
 OFX_ALS_END_NAMESPACE

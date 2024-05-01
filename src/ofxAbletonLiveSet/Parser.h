@@ -1,10 +1,15 @@
 #pragma once
-
-#include <Poco/InflatingStream.h>
+#include "Constants.h"
+#include "Tempo.h"
+#include "Model.h"
 
 #include "Constants.h"
 #include "Tempo.h"
 #include "Model.h"
+
+#ifndef OFX_ALS_WITHOUT_POCO
+#include <Poco/InflatingStream.h>
+#endif
 
 OFX_ALS_BEGIN_NAMESPACE
 

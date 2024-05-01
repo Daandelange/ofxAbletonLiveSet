@@ -8,11 +8,12 @@ bool Parser::open(const string& path){
 	if (!ifs) return false;
 	
 	pugi::xml_document doc;
-	
+
+#ifndef OFX_ALS_WITHOUT_POCO
 	// check extension ?
 	string extension = path.substr(path.find_last_of(".") + 1);
 	bool gzipped = false;
-	
+
 	if( extension == "als" || extension == "ALS") {
 		gzipped = true;
 		Poco::InflatingInputStream inflater(ifs, Poco::InflatingStreamBuf::STREAM_GZIP);
@@ -21,9 +22,12 @@ bool Parser::open(const string& path){
 		if (!doc.load(inflater)) return false;
 	}
 	else {
+#endif
 		if(!doc.load(ifs)) return false;
+#ifndef OFX_ALS_WITHOUT_POCO
 	}
 	
+#endif
 	// parse it!
 	parseGeneralInfo(doc);
 	parseTempo(doc);
