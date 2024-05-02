@@ -45,39 +45,51 @@ struct TimeSignature {
 	
 };
 
-struct MidiClip {
+struct FileInfo {
+	unsigned int size;
+	std::string name;
+	std::string relativePath;
+	// todo, available data: lastmodified, Absolute path, type
+};
+
+struct Volume {
+	float manual;
+	Automation automation;
+};
+
+struct Clip {
 	Time time;
 	Time endtime;
 	Time duration;
-	
+
 	string name;
-	string annotation;
 	int color;
-	
+
+	string annotation;
+};
+
+struct MidiClip : public Clip {
 	MidiClipLoop loop;
 	vector<Note> notes;
 	vector<Automation> envelopes;
 };
 
-struct AudioClip {
-	Time time;
-	Time endtime;
-	Time duration;
-	
-	string name;
-	//string annotation;
-	int color;
-
+struct AudioClip : public Clip  {
+	// todo : AudioClip/SampleRef holds file name, size, relPath and absPathHint info
+	FileInfo file;
 };
 
 struct Track {
 	string name;
 	int color;
+
+	// Todo: TrackGroupId
 };
 
 struct MidiTrack : public Track {
 	TimeSignature timeSignature;
 	vector<MidiClip> clips;
+	Volume volume;
 };
 
 struct AudioTrack : public Track {
@@ -85,6 +97,8 @@ struct AudioTrack : public Track {
 	Time startTime;
 	Time endTime;
 	vector<AudioClip> clips;
+	bool on;
+	Volume volume;
 };
 
 struct Locator {

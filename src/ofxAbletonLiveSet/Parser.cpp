@@ -2,6 +2,10 @@
 
 OFX_ALS_BEGIN_NAMESPACE
 
+// Ideas for more data to parse : GroupTrack, DeviceChain, Plugins info, etc.
+// SceneNames/Scene (corresponding to the vertical Ableton `Session` view)
+// (see also https://github.com/luizen/als-tools/blob/main/src/als-tools.infrastructure/Extractors/Collections/TracksCollectionExtractor.cs)
+
 bool Parser::open(const string& path){
 	ifstream ifs;
 	ifs.open(ofToDataPath(path).c_str());
@@ -58,10 +62,13 @@ void Parser::parseGeneralInfo(const pugi::xml_document &doc){
 		LS.userName = nodes[0].node().child("UserName").attribute("Value").as_string();
 		LS.annotation = nodes[0].node().child("Annotation").attribute("Value").as_string();
 	}
+
+	// Todo :
+	// <Ableton MajorVersion="X" MinorVersion="XX.X_XXX" Creator="Ableton Live XX.X.X">
 }
 
 void Parser::parseTempo(const pugi::xml_document& doc){
-	pugi::xpath_query q("//Tempo");
+	pugi::xpath_query q("//Tempo"); // <-- within <MasterTrack>
 	pugi::xpath_node_set nodes = q.evaluate_node_set(doc);
 	
 	if (!nodes.empty()) {
@@ -131,6 +138,9 @@ void Parser::parse(MidiTrack& MT, const pugi::xml_node &node, RealTime offset) {
 			controller_target_offset = nodes[0].node().attribute("Id").as_int(0);
 		}
 	}
+
+	// Volume
+	parse(MT.volume, node, offset);
 	
 	pugi::xpath_query q(".//ArrangerAutomation/Events/MidiClip");
 	pugi::xpath_node_set nodes = q.evaluate_node_set(node);
@@ -286,10 +296,20 @@ void Parser::parseAudioTrack(const pugi::xml_document& doc){
 void Parser::parse(AudioTrack& AT, const pugi::xml_node &node, RealTime offset) {
 	AT.name = node.child("Name").child("EffectiveName").attribute("Value").value();
 	AT.color = node.child("ColorIndex").attribute("Value").as_int();
+
+	// AudioTrack/DeviceChain/Mixer/On/Manual[Value] && AudioTrack/DeviceChain/MainSequencer/On/Manual[Value]
+	AT.on =
+		node.child("DeviceChain").child("Mixer").child("On").child("Manual").attribute("Value").as_bool() &&
+		node.child("DeviceChain").child("MainSequencer").child("On").child("Manual").attribute("Value").as_bool();
 	
 	pugi::xpath_query q(".//ArrangerAutomation/Events/AudioClip");
 	pugi::xpath_node_set nodes = q.evaluate_node_set(node);
 	
+	// Volume
+	parse(AT.volume, node, 0);
+
+	// Todo : Query TrackDelay ?
+
 	// AudioTrack/DeviceChain/MainSequencer/Sample/ArrangerAutomation/Events/AudioClip
 	
 	AT.clips.clear();
@@ -321,11 +341,53 @@ void Parser::parse(AudioClip& AC, const pugi::xml_node &node, RealTime offset){
 	
 	AC.color = node.child("ColorIndex").attribute("Value").as_int();
 	AC.name = node.child("Name").attribute("Value").value();
-	//MC.annotation = node.child("Annotation").attribute("Value").value();
+	AC.annotation = node.child("Annotation").attribute("Value").value();
 	
+	// Sample information
+	parse(AC.file, node.child("SampleRef").child("FileRef"));
+
 	// extract loop setting
 	//parse(MC.loop, node.child("Loop"), AC.time);
 	
+}
+
+// Supposes node is a <FileRef>
+void Parser::parse(FileInfo& F, const pugi::xml_node& node){
+	F.name = node.child("Name").attribute("Value").as_string();
+	F.size = node.child("SearchHint").child("FileSize").attribute("Value").as_uint();
+	if(pugi::xml_node relPathNode = node.child("RelativePath")){
+		F.relativePath = "";
+		for(auto pathElement : relPathNode.children("RelativePathElement")){
+			F.relativePath += pathElement.attribute("Dir").as_string();
+			F.relativePath += "/";
+		}
+	}
+}
+
+// Supposes node contains a single <Volume> and also contains the automations
+void Parser::parse(Volume& V, const pugi::xml_node& parentNode, float offset){
+
+	// AudioTrack/DeviceChain/Mixer/Volume/Manual[Value]
+	// AudioTrack/DeviceChain/Mixer/Volume/AutomationTarget[Id]
+	// --> then AudioTrack/AutomationEnvelopes/Envelopes/AutomationEnvelope/EnvelopeTarget/PointeeId[Value="XXX"]
+	// --> and AudioTrack/AutomationEnvelopes/Envelopes/AutomationEnvelope/Automation/Events/FloatEvent[Time,Value]
+
+	pugi::xpath_query vq(".//DeviceChain/Mixer/Volume");
+	if(pugi::xml_node volumeNode = vq.evaluate_node(parentNode).node()){
+		V.manual = volumeNode.child("Manual").attribute("Value").as_float();
+
+		// Does it have an automation ?
+		if(pugi::xml_attribute automationID = volumeNode.child("AutomationTarget").attribute("Id")){
+			V.automation.id = automationID.as_uint();
+			pugi::xpath_query aq((std::string(".//AutomationEnvelopes/Envelopes/AutomationEnvelope/EnvelopeTarget/PointeeId[@Value='") + std::to_string(V.automation.id) + "']/../..").c_str());
+			if(pugi::xpath_node node = aq.evaluate_node(parentNode)){
+				for(pugi::xml_node automationEntry : node.node().child("Automation").child("Events").children("FloatEvent")){
+					//std::cout << "FOUND VOLUME AUTOMATION EVENT @" << LS.tempo.toRealTime(automationEntry.attribute("Time").as_float()) << "s, value=" << ((automationEntry.attribute("Value").as_float()) + offset) << std::endl;
+					V.automation.events.insert({LS.tempo.toRealTime(automationEntry.attribute("Time").as_float()), (automationEntry.attribute("Value").as_float()) + offset});
+				}
+			}
+		}
+	}
 }
 
 //

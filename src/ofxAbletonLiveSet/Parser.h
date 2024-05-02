@@ -54,6 +54,10 @@ private:
 	void parse(AudioTrack& AT, const pugi::xml_node &node, RealTime offset);
 	
 	void parse(AudioClip& AC, const pugi::xml_node &node, RealTime offset);
+
+	void parse(FileInfo& AC, const pugi::xml_node &node);
+
+	void parse(Volume& V, const pugi::xml_node& parentNode, float offset=0.f);
 	//
 
 	void parseLocator(const pugi::xml_document& doc);

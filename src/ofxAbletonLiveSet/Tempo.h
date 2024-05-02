@@ -4,6 +4,7 @@
 
 OFX_ALS_BEGIN_NAMESPACE
 
+// fixme: Ableton seems to use double precision, using floats truncates the values.
 typedef float BarTime;
 typedef float RealTime;
 
