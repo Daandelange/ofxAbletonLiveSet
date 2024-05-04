@@ -48,9 +48,9 @@ _________
 ofxAbletonLiveSet is divided into multiple blocks that you stack together to match your needs :  
   1. A standardised ALS project model that you can query manually.  
   2. A parser that extracts the data from the XML data.  
-	3. A database object that lets you easily access the data over time.  
-	4. An event handler that emits ofEvents.  
-	5. _(Soon!)_ An ofxImGui helper to display the data.  
+  3. A database object that lets you easily access the data over time.  
+  4. An event handler that emits ofEvents.  
+  5. _(Soon!)_ An ofxImGui helper to display the data.  
 
 ###### File Loading
 - `.als` files are compressed ZIP files. By default, ofxPoco is used to decompress the file contents to obtain the underlying XML tree.
