@@ -15,8 +15,8 @@ _Note: This plugin doesn't let you control Ableton via OSC. (use [ofxAbleton](ht
 
 ###### Configuration
 
-**Disabling ofxPoco**
-In you project or addon that uses ofxAbletonLiveSet, you can define the `OFX_ALS_WITHOUT_POCO` compiler flag to disable usage of ofxPoco, which the plugin relies on historically.  
+**Disabling ofxPoco**  
+In your project or addon that uses ofxAbletonLiveSet, you can define the `OFX_ALS_WITHOUT_POCO` compiler flag to disable usage of ofxPoco, which the plugin relies on historically.  
 To not break existing projects, ofxPoco is still enabled by default; but it's recommended to disable it if you don't need very precise real-time events.
 
 ## Usage
