@@ -158,6 +158,7 @@ struct LiveSet {
 	} abletonVersion;
 };
 
+// Below are called events for legacy compatibility, but they are more a `LSNoteData` (not only to be used with events)
 struct LSNoteEvent {
 	LSNoteEvent(string _clipName, int _color, int _nthNote, int _nthNoteInClip, int _trackNb, Note _note) : clipName(_clipName), color(_color), nthNote(_nthNote), nthNoteInClip(_nthNoteInClip), trackNb(_trackNb), note(_note) {};
 	

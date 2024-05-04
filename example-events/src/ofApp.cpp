@@ -70,22 +70,28 @@ void ofApp::setup(){
 	ofAddListener(ofx::AbletonLiveSet::EventHandler::metronomEvent, this, &ofApp::metronomEventListener);
 	
 	// enable als events
-	//eventHandler.enableNoteEvents(LS);
-	eventHandler.enableTrackEvents(LS);
-	//eventHandler.enableMetronomEvents(LS);
+	if(!eventHandler.enableNoteEvents(LS)){
+		ofLogWarning("ofApp::setup()") << "Couldn't enable note events !";
+	}
+	if(!eventHandler.enableTrackEvents(LS)){
+		ofLogWarning("ofApp::setup()") << "Couldn't enable track events !";
+	}
+	if(!eventHandler.enableMetronomEvents(LS)){
+		ofLogWarning("ofApp::setup()") << "Couldn't enable metronom events !";
+	}
 	
 	//ofExit();
 }
 
-void ofApp::noteEventListener(ofx::AbletonLiveSet::LSNoteEvent & noteEvent){
+void ofApp::noteEventListener(const ofx::AbletonLiveSet::LSNoteEvent & noteEvent){
 	cout << "New Note Event: " << noteEvent.note.key << " @ " << noteEvent.note.time << endl;
 }
 
-void ofApp::trackEventListener(ofx::AbletonLiveSet::LSTrackEvent &trackEvent){
+void ofApp::trackEventListener(const ofx::AbletonLiveSet::LSTrackEvent &trackEvent){
 	cout << "New Track Event: " << trackEvent.trackName << " @ " << trackEvent.audioClip.time << " : " << trackEvent.audioClip.name << endl;
 }
 
-void ofApp::metronomEventListener(ofx::AbletonLiveSet::LSMetronomEvent &metronomEvent){
+void ofApp::metronomEventListener(const ofx::AbletonLiveSet::LSMetronomEvent &metronomEvent){
 	cout << "New Metronom Event: " << metronomEvent.realTime << " @ " << metronomEvent.isAccent << endl;
 }
 

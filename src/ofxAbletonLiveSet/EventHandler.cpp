@@ -1,9 +1,9 @@
 #include "EventHandler.h"
 
 // prototype seems to be needed for static ofEvents
-ofEvent<ofx::AbletonLiveSet::LSNoteEvent> ofx::AbletonLiveSet::EventHandler::noteEvent;
-ofEvent<ofx::AbletonLiveSet::LSMetronomEvent> ofx::AbletonLiveSet::EventHandler::metronomEvent;
-ofEvent<ofx::AbletonLiveSet::LSTrackEvent> ofx::AbletonLiveSet::EventHandler::trackEvent;
+ofEvent<const ofx::AbletonLiveSet::LSNoteEvent> ofx::AbletonLiveSet::EventHandler::noteEvent;
+ofEvent<const ofx::AbletonLiveSet::LSMetronomEvent> ofx::AbletonLiveSet::EventHandler::metronomEvent;
+ofEvent<const ofx::AbletonLiveSet::LSTrackEvent> ofx::AbletonLiveSet::EventHandler::trackEvent;
 
 OFX_ALS_BEGIN_NAMESPACE
 
@@ -37,11 +37,12 @@ void EventHandler::startThreadedTimer(){
 #ifndef OFX_ALS_WITHOUT_POCO
 //template <class ListenerClass>
 bool EventHandler::enableNoteEvents(  ){
-	if( LSNoteEvents.size() < 1 ) return false;
+	if( !bNotesParsed ) return false; // Need to parse first !
+	if( LSNoteEvents.size() < 1 ) return true; // Exit early, no events to fire
 	
 	startThreadedTimer();
 	
-	currentNoteEventIndex = 0;
+	resetIndexes();
 	
 	bNoteEvents = true;
 	
@@ -49,7 +50,7 @@ bool EventHandler::enableNoteEvents(  ){
 }
 
 bool EventHandler::enableNoteEvents(ofx::AbletonLiveSet::LiveSet &LS){
-	bool ret = parseNoteEvents(LS);
+	bool ret = parseNotes(LS);
 	ret *= enableNoteEvents();
 	return ret;
 }
@@ -57,68 +58,24 @@ bool EventHandler::enableNoteEvents(ofx::AbletonLiveSet::LiveSet &LS){
 
 
 void EventHandler::fireNextNoteEvents(Poco::Timestamp::TimeDiff curTime){
-	if(LSNoteEvents.size() < currentNoteEventIndex) return;
 	
 	// stopWatch.elapsed() is in milliseconds
 	// note.time is in seconds
 	
-	for(int i=currentNoteEventIndex; i<LSNoteEvents.size(); i++){
-		if(curTime >= LSNoteEvents[i].note.time*1000000){
-			// fire the event!
-			ofNotifyEvent( noteEvent, LSNoteEvents[i] );
-			
-			// remember
-			currentNoteEventIndex=i+1;
-		}
-		// interrupt for loop ?
-		if(LSNoteEvents[i].note.time*1000000 > curTime) break;
+	while( const LSNoteEvent* newNote = getNextNote(curTime/1000000) ){
+		ofNotifyEvent( noteEvent, (const LSNoteEvent&)*newNote );
 	}
 }
 #endif
-//
-bool EventHandler::parseNoteEvents( LiveSet& LS ){
-	
-	// ALS loaded ?
-	if( !LS.isLoaded() ){
-		ofLogNotice("OfxAbletonLiveSet::EventHandler::parseNoteEvents()", "before parsing events, make sure to parse() a live set.");
-		return false;
-	}
-	
-	// clean up
-	LSNoteEvents.clear();
-	
-	// loop trough LS data
-	for (int trackNb = 0; trackNb < LS.miditracks.size(); trackNb++){
-		int nthNote=0;
-		
-		for(int clipNb=0; clipNb < LS.miditracks[trackNb].clips.size(); clipNb++){
-			
-			string clipName = LS.miditracks[trackNb].clips[clipNb].name;
-			int clipColor = LS.miditracks[trackNb].clips[clipNb].color;
-			int nthInClip = 0;
-			
-			for( vector<Note>::iterator it=LS.miditracks[trackNb].clips[clipNb].notes.begin(); it != LS.miditracks[trackNb].clips[clipNb].notes.end(); it++ ){
-				
-				LSNoteEvent noteEvent( clipName, clipColor, nthNote, nthInClip, trackNb, *it );
-				
-				LSNoteEvents.push_back(noteEvent);
-				
-				nthInClip ++;
-			}
-		}
-	}
-	std:sort(LSNoteEvents.begin(), LSNoteEvents.end(), sort_by_time<LSNoteEvent>);
-	
-	return true;
-}
 
 #ifndef OFX_ALS_WITHOUT_POCO
 bool EventHandler::enableTrackEvents(  ){
-	if( LSTrackEvents.size() < 1 ) return false;
+	if( !bTrackParsed ) return false; // Need to parse first !
+	if( LSTrackEvents.size() < 1 ) return true; // Exit early, no events to fire
 	
 	startThreadedTimer();
 	
-	currentTrackEventIndex = 0;
+	resetIndexes();
 	
 	bTrackEvents = true;
 	
@@ -126,7 +83,7 @@ bool EventHandler::enableTrackEvents(  ){
 }
 
 bool EventHandler::enableTrackEvents(ofx::AbletonLiveSet::LiveSet &LS){
-	bool ret = parseTrackEvents(LS);
+	bool ret = parseTracks(LS);
 	ret *= enableTrackEvents();
 	return ret;
 }
@@ -134,52 +91,15 @@ bool EventHandler::enableTrackEvents(ofx::AbletonLiveSet::LiveSet &LS){
 
 
 void EventHandler::fireNextTrackEvents(Poco::Timestamp::TimeDiff curTime){
-	if(LSTrackEvents.size() < currentTrackEventIndex) return;
 	
 	// stopWatch.elapsed() is in milliseconds
 	// Track.time is in seconds
 	
-	for(int i=currentTrackEventIndex; i<LSTrackEvents.size(); i++){
-		if(curTime >= LSTrackEvents[i].audioClip.time*1000000){
-			// fire the event!
-			ofNotifyEvent( trackEvent, LSTrackEvents[i] );
-			
-			// remember
-			currentTrackEventIndex=i+1;
-		}
-		// interrupt for loop ?
-		if(LSTrackEvents[i].audioClip.time*1000000 > curTime) break;
+	while( const LSNoteEvent* newNote = getNextNote(curTime/1000000) ){
+		ofNotifyEvent( noteEvent, (const LSNoteEvent&)*newNote );
 	}
 }
 #endif
-
-//
-bool EventHandler::parseTrackEvents( LiveSet& LS ){
-	
-	// ALS loaded ?
-	if( !LS.isLoaded() ){
-		ofLogNotice("OfxAbletonLiveSet::EventHandler::parseTrackEvents()", "before parsing events, make sure to parse() a live set.");
-		return false;
-	}
-	
-	// clean up
-	LSTrackEvents.clear();
-	
-	// loop trough LS data
-	for (int trackNb = 0; trackNb < LS.audiotracks.size(); trackNb++){
-		
-		for(int clipNb=0; clipNb < LS.audiotracks[trackNb].clips.size(); clipNb++){
-				
-			LSTrackEvent trackEvent( LS.audiotracks[trackNb].name, LS.audiotracks[trackNb].clips[clipNb], trackNb, clipNb );
-			
-			LSTrackEvents.push_back(trackEvent);
-			
-		}
-	}
-	std:sort(LSTrackEvents.begin(), LSTrackEvents.end(), sort_by_audio_clip_time<LSTrackEvent>);
-	
-	return true;
-}
 
 #ifndef OFX_ALS_WITHOUT_POCO
 bool EventHandler::enableMetronomEvents(){
@@ -209,7 +129,7 @@ bool EventHandler::parseMetronomEvents(ofx::AbletonLiveSet::LiveSet &LS){
 	LSMetronomEvents.clear();
 	
 	// loop trough LS data
-	for (int trackNb = 0; trackNb < LS.miditracks.size(); trackNb++){
+	for (std::size_t trackNb = 0; trackNb < LS.miditracks.size(); trackNb++){
 		LSMetronomEvent LSE;
 		LSE.timeSignature = LS.miditracks[trackNb].timeSignature;
 		LSE.trackNb = trackNb;
@@ -223,7 +143,7 @@ bool EventHandler::parseMetronomEvents(ofx::AbletonLiveSet::LiveSet &LS){
 void EventHandler::fireNextMetronomEvents(Poco::Timestamp::TimeDiff curTime){
 	
 	// todo: the system can only handle 1 metronom for now...
-	for(int i=0; i<LSMetronomEvents.size(); i++){
+	for(std::size_t i=0; i<LSMetronomEvents.size(); i++){
 		
 		if(curTime < nextMetronomEvent[i] ) continue;
 			
@@ -246,12 +166,12 @@ void EventHandler::threadedTimerTick(Timer& timer){
 	// filter out unneccesary calls
 	if(bNoteEvents){
 		// no more notes ?
-		if(LSNoteEvents.size()<=currentNoteEventIndex){
+		if(LSNoteEvents.size()<=nextServedNoteIndex){
 			bNoteEvents = false;
 			return;
 		}
 		
-		if( stopWatch.elapsed() >= LSNoteEvents[currentNoteEventIndex].note.time*1000000 ) fireNextNoteEvents( stopWatch.elapsed() );
+		if( stopWatch.elapsed() >= LSNoteEvents[nextServedNoteIndex].note.time*1000000 ) fireNextNoteEvents( stopWatch.elapsed() );
 	}
 	if(bMetronomEvents){
 		//if( stopWatch.elapsed() >= nextMetronomEvent )
