@@ -6,9 +6,14 @@ OFX_ALS_BEGIN_NAMESPACE
 // SceneNames/Scene (corresponding to the vertical Ableton `Session` view)
 // (see also https://github.com/luizen/als-tools/blob/main/src/als-tools.infrastructure/Extractors/Collections/TracksCollectionExtractor.cs)
 
-bool Parser::open(const string& path){
+// This has been tested with Ableton 10.x versions
+// Ableton 11 Compatibility notes:
+// - <ColorIndex> --> <Color>
+
+
+bool Parser::open(const string& path, const bool relativeToDataFolder){
 	ifstream ifs;
-	ifs.open(ofToDataPath(path).c_str());
+	ifs.open(relativeToDataFolder?ofToDataPath(path).c_str():path.c_str());
 	if (!ifs) return false;
 	
 	pugi::xml_document doc;
@@ -34,7 +39,13 @@ bool Parser::open(const string& path){
 	else {
 #endif
 		if(!doc.load(ifs)){
-			ofLogNotice("ofxAbletonLiveSet") << "Couldn't load XML contents of file `" << path << "`.";
+			ofLogNotice("ofxAbletonLiveSet") << "Couldn't load XML contents of file `" << path << "`."
+#ifdef OFX_ALS_WITHOUT_POCO
+			// Todo: Manually send a system call to decompress the file ??
+			// osx: gzip -cd ./project.als > ./project.xml
+			<< " Please note that poco is disabled so decompressing ALS files is not supported.";
+#endif
+			;
 			return false;
 		}
 #ifndef OFX_ALS_WITHOUT_POCO
@@ -42,14 +53,16 @@ bool Parser::open(const string& path){
 	
 #endif
 	// parse it!
+	parseTempo(doc); // Important : pars tempo first, others might need it to convert to seconds
 	parseGeneralInfo(doc);
-	parseTempo(doc);
 	parseMidiTrack(doc);
 	parseLocator(doc);
 	parseAudioTrack(doc);
 	
+	// Remember
 	LS.loadedFile=path;
-	
+	LS.loadedFileIsRelative = relativeToDataFolder;
+
 	return true;
 }
 
@@ -63,16 +76,27 @@ void Parser::parseGeneralInfo(const pugi::xml_document &doc){
 		LS.annotation = nodes[0].node().child("Annotation").attribute("Value").as_string();
 	}
 
-	// Todo :
-	// <Ableton MajorVersion="X" MinorVersion="XX.X_XXX" Creator="Ableton Live XX.X.X">
+	if( pugi::xml_node abletonNode = doc.child("Ableton")){
+		LS.abletonVersion.creator = abletonNode.attribute("Creator").as_string();
+		LS.abletonVersion.versionMajor = abletonNode.attribute("MajorVersion").as_uint();
+		LS.abletonVersion.versionMinor = abletonNode.attribute("MinorVersion").as_string();
+	}
+
+	// Duration
+	pugi::xpath_query tq("//LiveSet/Transport");
+	if( pugi::xml_node transportNode = tq.evaluate_node(doc).node() ){
+		LS.loopDuration = LS.tempo.toRealTime(transportNode.child("LoopLength").attribute("Value").as_uint());
+		LS.loopStartOffset = LS.tempo.toRealTime(transportNode.child("LoopStart").attribute("Value").as_int());
+		LS.loopOn = transportNode.child("LoopOn").attribute("Value").as_bool();
+	}
 }
 
 void Parser::parseTempo(const pugi::xml_document& doc){
-	pugi::xpath_query q("//Tempo"); // <-- within <MasterTrack>
-	pugi::xpath_node_set nodes = q.evaluate_node_set(doc);
+	pugi::xpath_query q("//Tempo"); // <-- there's only 1 <Tempo>, within <MasterTrack>
+	pugi::xpath_node node = q.evaluate_node(doc);
 	
-	if (!nodes.empty()) {
-		parse(LS.tempo, nodes[0].node());
+	if(node) {
+		parse(LS.tempo, node.node());
 	}
 }
 
@@ -111,8 +135,12 @@ void Parser::parseMidiTrack(const pugi::xml_document& doc){
 
 void Parser::parse(MidiTrack& MT, const pugi::xml_node &node, RealTime offset) {
 	MT.name = node.child("Name").child("EffectiveName").attribute("Value").value();
-	MT.color = node.child("ColorIndex").attribute("Value").as_int();
+	MT.color = node.child("ColorIndex").attribute("Value").as_uint();
 	
+	MT.on =
+		node.child("DeviceChain").child("Mixer").child("On").child("Manual").attribute("Value").as_bool() &&
+		node.child("DeviceChain").child("MainSequencer").child("On").child("Manual").attribute("Value").as_bool();
+
 	{
 		// time signatures are in clips and may change over time.
 		// here we just get the 1st one from the 1st clip and apply it to the whole track
@@ -286,7 +314,7 @@ void Parser::parseAudioTrack(const pugi::xml_document& doc){
 	
 	LS.audiotracks.clear();
 	
-	for (int i = 0; i < nodes.size(); i++){
+	for (unsigned int i = 0; i < nodes.size(); i++){
 		AudioTrack AT;
 		parse(AT, nodes[i].node(), 0);
 		LS.audiotracks.push_back(AT);
@@ -295,7 +323,7 @@ void Parser::parseAudioTrack(const pugi::xml_document& doc){
 
 void Parser::parse(AudioTrack& AT, const pugi::xml_node &node, RealTime offset) {
 	AT.name = node.child("Name").child("EffectiveName").attribute("Value").value();
-	AT.color = node.child("ColorIndex").attribute("Value").as_int();
+	AT.color = node.child("ColorIndex").attribute("Value").as_uint();
 
 	// AudioTrack/DeviceChain/Mixer/On/Manual[Value] && AudioTrack/DeviceChain/MainSequencer/On/Manual[Value]
 	AT.on =
@@ -339,7 +367,7 @@ void Parser::parse(AudioClip& AC, const pugi::xml_node &node, RealTime offset){
 	AC.endtime = LS.tempo.toRealTime(end) + offset;
 	AC.duration = AC.endtime - AC.time;
 	
-	AC.color = node.child("ColorIndex").attribute("Value").as_int();
+	AC.color = node.child("ColorIndex").attribute("Value").as_uint();
 	AC.name = node.child("Name").attribute("Value").value();
 	AC.annotation = node.child("Annotation").attribute("Value").value();
 	

@@ -32,6 +32,28 @@ struct Note {
 	}
 };
 
+struct AbletonColorSwatch {
+
+	// Docs
+	// There's no docs on the colorIndex value, but it seems to match the M4L swatch.
+	// M4L docs say it's a bitmask, maybe different from OF's one : (0x00rrggbb or (2^16 * red) + (2^8) * green + blue) ?
+	// Src: https://docs.cycling74.com/max5/refpages/m4l-ref/m4l_live_object_model.html#Clip
+	// Here's an image of them : https://remotify.io/community/question/how-display-ableton-track-colors-midi-controller-pads
+	//		but the numbers are different; see table below with reverse-engineered color values: (xxx = unverified)
+	// There are 5 rows, 14 columns. Colors are quite ordered so there could be an algorithm behind it.
+	// First ROW : START - 140 - xxx - xxx - xxx - xxx - xxx - xxx - xxx - xxx - xxx - xxx - xxx - 152 - 153 - END
+	// 2nd   ROW : START - 154 - xxx - xxx - xxx - xxx - xxx - xxx - xxx - xxx - xxx - xxx - xxx - xxx - xxx - END
+	// 3rd   ROW : START - 168 - xxx - xxx - xxx - xxx - xxx - xxx - xxx - xxx - xxx - xxx - xxx - xxx - xxx - END
+	// 4th   ROW : START - 182 - xxx - xxx - xxx - xxx - xxx - xxx - xxx - xxx - xxx - xxx - xxx - xxx - xxx - END
+	// Last  ROW : START - 196 - 197 - 198 - 199 - 278 - 279 - 280 - 281 - 282 - 283 - 284 - 285 - 286 - 287 - END
+
+	static ofFloatColor getColor(unsigned int _color){
+		unsigned int normalizedIndex = (_color-((_color<200)?140:(140+278-200))); // reverse engineered formulae
+		return ofFloatColor::fromHex( Colors[normalizedIndex%70] );
+	}
+	static const int Colors[70];
+};
+
 struct Automation {
 	int id;
 	float getValueAt(float time) const;
@@ -55,6 +77,9 @@ struct FileInfo {
 struct Volume {
 	float manual;
 	Automation automation;
+	bool isManual() const {
+		return automation.events.size()==0;
+	}
 };
 
 struct Clip {
@@ -66,6 +91,8 @@ struct Clip {
 	int color;
 
 	string annotation;
+
+	virtual ~Clip() = default; // To support polymorphism
 };
 
 struct MidiClip : public Clip {
@@ -82,23 +109,22 @@ struct AudioClip : public Clip  {
 struct Track {
 	string name;
 	int color;
+	Volume volume;
+	bool on;
 
 	// Todo: TrackGroupId
+	//TimeSignature timeSignature;
+	//Time startTime;
+	//Time endTime;
 };
 
 struct MidiTrack : public Track {
 	TimeSignature timeSignature;
 	vector<MidiClip> clips;
-	Volume volume;
 };
 
 struct AudioTrack : public Track {
-	//TimeSignature timeSignature;
-	Time startTime;
-	Time endTime;
 	vector<AudioClip> clips;
-	bool on;
-	Volume volume;
 };
 
 struct Locator {
@@ -109,9 +135,10 @@ struct Locator {
 
 struct LiveSet {
 	string name;
-	string userName;
+	string userName; // User-defined project name !
 	string annotation;
 	string loadedFile;
+	bool loadedFileIsRelative;
 	bool isLoaded() const {
 		return (!loadedFile.empty());
 	}
@@ -119,6 +146,16 @@ struct LiveSet {
 	vector<Locator> locators;
 	vector<MidiTrack> miditracks;
 	vector<AudioTrack> audiotracks;
+
+	float loopStartOffset;
+	float loopDuration;
+	bool loopOn;
+
+	struct AbletonVersion_ {
+		unsigned int versionMajor;
+		std::string versionMinor;
+		std::string creator;
+	} abletonVersion;
 };
 
 struct LSNoteEvent {

@@ -43,15 +43,15 @@ void Tempo::updateTempoMap(const map<BarTime, float>& data, float default_tempo)
 	
 	globalTempo = default_tempo;
 	
-	if (events.size() <= 1){
+	if (events.size() <= 1u){
 		timemap = new SimpleTimemap(default_tempo);
 	}
 	else{
 		// timemap = new AutometedTimemap(events);
-		throw "tempo automation is not implemented yet";
+		throw TempoException("Tempo automation is not implemented yet");
 	}
 	
-	for (int i = 0; i < events.size(); i++){
+	for (unsigned int i = 0; i < events.size(); i++){
 		events[i].time = toRealTime(events[i].time);
 	}
 }

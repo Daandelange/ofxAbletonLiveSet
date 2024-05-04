@@ -8,6 +8,16 @@ OFX_ALS_BEGIN_NAMESPACE
 typedef float BarTime;
 typedef float RealTime;
 
+class TempoException : public std::exception {
+    public:
+        TempoException(char* _msg) : msg(_msg){};
+        virtual char * what () const noexcept override {
+            return msg;
+        }
+    private:
+        char* msg;
+};
+
 class Tempo {
 public:
 	

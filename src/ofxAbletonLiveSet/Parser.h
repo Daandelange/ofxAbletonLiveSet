@@ -18,7 +18,7 @@ public:
 	
 	Parser(LiveSet &LS) : LS(LS) {}
 	
-	bool open(const string& path);
+	bool open(const string& path, const bool relativeToDataFolder=true);
 	
 	bool isLoaded() const;
 	string loadedLiveSet();
