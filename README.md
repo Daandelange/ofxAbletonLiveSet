@@ -14,17 +14,20 @@ _Note: This plugin doesn't let you control Ableton via OSC. (use [ofxAbleton](ht
 - If using OF < 0.10 you'll need to install [ofxPugiXml](http://github.com/bakercp/ofxPugiXML).
 
 ###### Configuration
-In you project or addon that uses ofxAbletonLiveSet, you can define the `OFX_ALS_WITHOUT_POCO` compiler flag to disable usage of ofxPoco.
+
+**Disabling ofxPoco**
+In you project or addon that uses ofxAbletonLiveSet, you can define the `OFX_ALS_WITHOUT_POCO` compiler flag to disable usage of ofxPoco, which the plugin relies on historically.  
+To not break existing projects, ofxPoco is still enabled by default; but it's recommended to disable it if you don't need very precise real-time events.
 
 ## Usage
 Please refer to the __project examples__ for detailed information.  
 
 ###### Parse ALS file
 ````cpp
-	ofxAbletonLiveSet::LiveSet LS;
-	ofxAbletonLiveSet::Parser parser(LS);
-	parser.open("Project.als");
-	// LS now contains various live set data
+ofxAbletonLiveSet::LiveSet LS;
+ofxAbletonLiveSet::Parser parser(LS);
+parser.open("Project.als");
+// LS now contains various live set data
 ````
 
 ###### Events:
@@ -43,11 +46,11 @@ _________
 ## Features  
 
 ofxAbletonLiveSet is divided into multiple blocks that you stack together to match your needs :  
-  1. A standardised ALS project model that you can query manually.
-  2. A parser that extracts the data from the XML data.
-	3. A database object that lets you easily access the data over time.
-	4. An event handler that emits ofEvents.
-	5. _(Soon!)_ An ofxImGui helper to display the data.
+  1. A standardised ALS project model that you can query manually.  
+  2. A parser that extracts the data from the XML data.  
+	3. A database object that lets you easily access the data over time.  
+	4. An event handler that emits ofEvents.  
+	5. _(Soon!)_ An ofxImGui helper to display the data.  
 
 ###### File Loading
 - `.als` files are compressed ZIP files. By default, ofxPoco is used to decompress the file contents to obtain the underlying XML tree.
@@ -64,7 +67,8 @@ ofxAbletonLiveSet is divided into multiple blocks that you stack together to mat
 
 ###### Event Nofication  
 
-By default, Poco is used for precise timing. If poco is disabled, the events are fired using `ofThread` and `ofGetElapsedofGetElapsedTimef`.
+By default, Poco is used for precise timing.  
+If poco is disabled, the events are fired using `ofThread` and `ofGetElapsedofGetElapsedTimef`.
 - Notify of Metronom events.
 - Notify of MidiNote events.
 - Notify of AudioClip events.
