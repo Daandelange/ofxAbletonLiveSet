@@ -18,13 +18,14 @@ bool Parser::open(const string& path, const bool relativeToDataFolder){
 	
 	pugi::xml_document doc;
 
-#ifndef OFX_ALS_WITHOUT_POCO
 	// check extension ?
 	string extension = path.substr(path.find_last_of(".") + 1);
 	bool gzipped = false;
 
 	if( extension == "als" || extension == "ALS") {
 		gzipped = true;
+
+#ifndef OFX_ALS_WITHOUT_POCO
 		Poco::InflatingInputStream inflater(ifs, Poco::InflatingStreamBuf::STREAM_GZIP);
 		if (!inflater){
 			ofLogNotice("ofxAbletonLiveSet") << "Couldn't decompress ALS file `" << path << "`.";
@@ -35,23 +36,45 @@ bool Parser::open(const string& path, const bool relativeToDataFolder){
 			ofLogNotice("ofxAbletonLiveSet") << "Couldn't load XML contents of file `" << path << "`.";
 			return false;
 		}
-	}
-	else {
-#endif
-		if(!doc.load(ifs)){
-			ofLogNotice("ofxAbletonLiveSet") << "Couldn't load XML contents of file `" << path << "`."
-#ifdef OFX_ALS_WITHOUT_POCO
-			// Todo: Manually send a system call to decompress the file ??
-			// osx: gzip -cd ./project.als > ./project.xml
-			<< " Please note that poco is disabled so decompressing ALS files is not supported.";
-#endif
-			;
+#else
+		// Try decompress via syscall
+		std::string absPath = relativeToDataFolder?ofToDataPath(path, true):path;
+		std::string xmlPath = absPath.substr(0, absPath.find_last_of(".")) + ".xml";
+#	if defined( TARGET_OSX ) || defined(TARGET_LINUX)
+		// osx/linux: gzip -kcd ./project.als > ./project.xml
+		//		-k : keep original
+		//		-s : output to cout (output goes to file after)
+		//		-d : decompress
+		std::string cmd = std::string("gzip -kcd ") + absPath + " > " + xmlPath;
+		auto result = ofSystem(cmd);
+		if(result.size()==0){
+			ifs.close(); // Needed to allow opening a new one
+			ifs.open(xmlPath);
+			if (!ifs){
+				ofLogError("ofxAbletonLiveSet") << "Failed reading the decompressed ALS file after system call. File: " << xmlPath;
+				return false;
+			}
+			if(!doc.load(ifs)){
+				ofLogNotice("ofxAbletonLiveSet") << "Couldn't load XML contents of file `" << path << "`.";
+				return false;
+			}
+		}
+		else {
+			ofLogError("ofxAbletonLiveSet") << "Failed decompressing the ALS file via system call. Error: " << result;
 			return false;
 		}
-#ifndef OFX_ALS_WITHOUT_POCO
-	}
-	
+#	else
+		//<< " Please note that poco is disabled so decompressing ALS files is not supported.";
+		ofLogError("ofxAbletonLiveSet") << "The liveset is an `als` file, which means it's compressed. Decompressing isn't implemented on your platform when poco is disabled.";
+#	endif
 #endif
+	}
+	else {
+		if(!doc.load(ifs)){
+			ofLogNotice("ofxAbletonLiveSet") << "Couldn't load XML contents of file `" << path << "`.";
+			return false;
+		}
+	}
 	// parse it!
 	parseTempo(doc); // Important : pars tempo first, others might need it to convert to seconds
 	parseGeneralInfo(doc);

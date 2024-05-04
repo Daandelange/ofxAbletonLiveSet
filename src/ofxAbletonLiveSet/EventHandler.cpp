@@ -10,6 +10,9 @@ OFX_ALS_BEGIN_NAMESPACE
 EventHandler::~EventHandler(){
 #ifndef OFX_ALS_WITHOUT_POCO
 	delete timer;
+#else
+	// Stop & Wait thread
+	waitForThread();
 #endif
 }
 
@@ -21,7 +24,9 @@ EventHandler::EventHandler(){
 }
 
 void EventHandler::startThreadedTimer(){
+
 #ifndef OFX_ALS_WITHOUT_POCO
+
 	// already started?
 	if(stopWatch.elapsed()>0) return;
 	
@@ -31,12 +36,20 @@ void EventHandler::startThreadedTimer(){
 	
 	timer->start(TimerCallback<EventHandler>(*this, &EventHandler::threadedTimerTick ), Thread::PRIO_HIGHEST);
 	stopWatch.start();
+
+#else
+	if(isThreadRunning()) return;
+
+	startTime = ofGetElapsedTimef();
+	startThread();
+
 #endif
 }
 
-#ifndef OFX_ALS_WITHOUT_POCO
+
 //template <class ListenerClass>
 bool EventHandler::enableNoteEvents(  ){
+
 	if( !bNotesParsed ) return false; // Need to parse first !
 	if( LSNoteEvents.size() < 1 ) return true; // Exit early, no events to fire
 	
@@ -50,26 +63,25 @@ bool EventHandler::enableNoteEvents(  ){
 }
 
 bool EventHandler::enableNoteEvents(ofx::AbletonLiveSet::LiveSet &LS){
+
 	bool ret = parseNotes(LS);
 	ret *= enableNoteEvents();
 	return ret;
 }
 
 
+void EventHandler::fireNextNoteEvents(Time curTime){
 
-void EventHandler::fireNextNoteEvents(Poco::Timestamp::TimeDiff curTime){
-	
 	// stopWatch.elapsed() is in milliseconds
 	// note.time is in seconds
 	
-	while( const LSNoteEvent* newNote = getNextNote(curTime/1000000) ){
+	while( const LSNoteEvent* newNote = getNextNote(curTime) ){
 		ofNotifyEvent( noteEvent, (const LSNoteEvent&)*newNote );
 	}
 }
-#endif
 
-#ifndef OFX_ALS_WITHOUT_POCO
 bool EventHandler::enableTrackEvents(  ){
+
 	if( !bTrackParsed ) return false; // Need to parse first !
 	if( LSTrackEvents.size() < 1 ) return true; // Exit early, no events to fire
 	
@@ -88,10 +100,9 @@ bool EventHandler::enableTrackEvents(ofx::AbletonLiveSet::LiveSet &LS){
 	return ret;
 }
 
-
-
-void EventHandler::fireNextTrackEvents(Poco::Timestamp::TimeDiff curTime){
 	
+void EventHandler::fireNextTrackEvents(Time curTime){
+
 	// stopWatch.elapsed() is in milliseconds
 	// Track.time is in seconds
 	
@@ -99,9 +110,8 @@ void EventHandler::fireNextTrackEvents(Poco::Timestamp::TimeDiff curTime){
 		ofNotifyEvent( noteEvent, (const LSNoteEvent&)*newNote );
 	}
 }
-#endif
 
-#ifndef OFX_ALS_WITHOUT_POCO
+//
 bool EventHandler::enableMetronomEvents(){
 	startThreadedTimer();
 	
@@ -117,7 +127,6 @@ bool EventHandler::enableMetronomEvents(ofx::AbletonLiveSet::LiveSet &LS){
 	
 	return parseMetronomEvents(LS) && enableMetronomEvents();
 }
-#endif
 
 bool EventHandler::parseMetronomEvents(ofx::AbletonLiveSet::LiveSet &LS){
 	
@@ -139,9 +148,8 @@ bool EventHandler::parseMetronomEvents(ofx::AbletonLiveSet::LiveSet &LS){
 	return true;
 }
 
-#ifndef OFX_ALS_WITHOUT_POCO
-void EventHandler::fireNextMetronomEvents(Poco::Timestamp::TimeDiff curTime){
-	
+
+void EventHandler::fireNextMetronomEvents(Time curTime){
 	// todo: the system can only handle 1 metronom for now...
 	for(std::size_t i=0; i<LSMetronomEvents.size(); i++){
 		
@@ -149,11 +157,12 @@ void EventHandler::fireNextMetronomEvents(Poco::Timestamp::TimeDiff curTime){
 			
 		LSMetronomEvent LSE( LSMetronomEvents[i] );
 		float oneBar = 60.0f/LSE.bpm;
-		LSE.barTime = floor( (curTime*1.0f/1000000)/oneBar );
+		LSE.barTime = floor( (curTime)/oneBar );
 		LSE.realTime = LSE.barTime * oneBar;
 		LSE.isAccent = (LSE.barTime%LSE.timeSignature.numerator)==0;
 		
-		nextMetronomEvent[i] = LSE.realTime*1000000+oneBar*1000000;
+		// Fixme : So... metronom events stack up infinitely as they get fired ?!
+		nextMetronomEvent[i] = LSE.realTime+oneBar;
 		
 		ofNotifyEvent( ofx::AbletonLiveSet::EventHandler::metronomEvent, LSE );
 	}
@@ -161,28 +170,42 @@ void EventHandler::fireNextMetronomEvents(Poco::Timestamp::TimeDiff curTime){
 }
 
 // the callback remains in the timer thread. Maybe need to lock mutex ?
-void EventHandler::threadedTimerTick(Timer& timer){
+#ifndef OFX_ALS_WITHOUT_POCO
+void EventHandler::threadedTimerTick(Timer& _timer){
+	Time time = stopWatch.elapsed()/1000000.0;
+#else
+void EventHandler::threadedTimerTick(Time time){
+#endif
 
 	// filter out unneccesary calls
 	if(bNoteEvents){
 		// no more notes ?
-		if(LSNoteEvents.size()<=nextServedNoteIndex){
+		if(LSNoteEvents.size() <= nextServedNoteIndex){
 			bNoteEvents = false;
 			return;
 		}
-		
-		if( stopWatch.elapsed() >= LSNoteEvents[nextServedNoteIndex].note.time*1000000 ) fireNextNoteEvents( stopWatch.elapsed() );
+		if( time >= LSNoteEvents[nextServedNoteIndex].note.time ){
+			fireNextNoteEvents( time );
+		}
 	}
 	if(bMetronomEvents){
-		//if( stopWatch.elapsed() >= nextMetronomEvent )
-		fireNextMetronomEvents( stopWatch.elapsed() );
+		//if( elapsedSeconds >= nextMetronomEvent )
+		fireNextMetronomEvents( time );
 	}
 	if(bTrackEvents){
-		//if( stopWatch.elapsed() >= nextMetronomEvent )
-		fireNextTrackEvents( stopWatch.elapsed() );
+		//if( elapsedSeconds >= nextMetronomEvent )
+		fireNextTrackEvents( time );
 	}
 	
 	return;
+}
+
+#ifdef OFX_ALS_WITHOUT_POCO
+void EventHandler::threadedFunction(){
+	while(isThreadRunning()){
+		threadedTimerTick( ofGetElapsedTimef()-startTime );
+		sleep(10); // fixme : find correct value for timer
+	}
 }
 #endif
 

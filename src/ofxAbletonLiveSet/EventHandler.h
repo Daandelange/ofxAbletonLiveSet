@@ -10,6 +10,8 @@
 #include "Poco/Thread.h"
 #include "Poco/Timestamp.h"
 #include "Poco/Timer.h"
+#else
+#include <chrono>
 #endif
 
 OFX_ALS_BEGIN_NAMESPACE
@@ -21,29 +23,29 @@ using Poco::Timer;
 using Poco::TimerCallback;
 #endif
 
-class EventHandler : ofx::AbletonLiveSet::Db {
+class EventHandler : protected ofx::AbletonLiveSet::Db
+#ifdef OFX_ALS_WITHOUT_POCO
+		, protected ofThread
+#endif
+{
 public:
 	~EventHandler();
 	EventHandler();
 	
-#ifndef OFX_ALS_WITHOUT_POCO
 	bool enableNoteEvents( );
 	bool enableNoteEvents( LiveSet& LS );
-#endif
 	
-#ifndef OFX_ALS_WITHOUT_POCO
 	bool enableTrackEvents( );
 	bool enableTrackEvents( LiveSet& LS );
-#endif
 
-#ifndef OFX_ALS_WITHOUT_POCO
 	bool enableMetronomEvents( );
 	bool enableMetronomEvents( LiveSet& LS );
-#endif
 	bool parseMetronomEvents( LiveSet& LS );
 
 #ifndef OFX_ALS_WITHOUT_POCO
-	void threadedTimerTick(Timer& timer);
+	void threadedTimerTick(Timer& _timer);
+#else
+	void threadedTimerTick(Time timer);
 #endif
 
 	// OF event listener / notifier
@@ -57,26 +59,27 @@ private:
 	bool bTrackEvents = false;
 	bool bMetronomEvents = false;
 
-#ifndef OFX_ALS_WITHOUT_POCO
-	vector<Poco::Timestamp::TimeDiff> nextMetronomEvent;
-#else
-	vector<float> nextMetronomEvent;
-#endif
+//#ifndef OFX_ALS_WITHOUT_POCO
+//	vector<Poco::Timestamp::TimeDiff> nextMetronomEvent;
+//#else
+	vector<Time> nextMetronomEvent;
+//#endif
 
 	vector<LSMetronomEvent> LSMetronomEvents;
 
 #ifndef OFX_ALS_WITHOUT_POCO
 	Stopwatch stopWatch;
 	Timer * timer;
+#else
+	virtual void threadedFunction() override;
+	float startTime; // /!\ Threaded variable !
 #endif
 	
 	void startThreadedTimer();
 
-#ifndef OFX_ALS_WITHOUT_POCO
-	void fireNextNoteEvents( Poco::Timestamp::TimeDiff curTime );
-	void fireNextTrackEvents( Poco::Timestamp::TimeDiff curTime );
-	void fireNextMetronomEvents( Poco::Timestamp::TimeDiff curTime );
-#endif
+	void fireNextNoteEvents( Time curTime );
+	void fireNextTrackEvents( Time curTime );
+	void fireNextMetronomEvents( Time curTime );
 	
 	
 };
