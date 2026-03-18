@@ -6,7 +6,7 @@ void ofApp::setup(){
 	
 	// Put your filename here ! (the provided one doesn't demonstrate all features!)
 	// It can open either XML or ALS formats
-#define FILENAME "Test.als"
+	#define FILENAME "test.als"
 
 	if( !parser.open(FILENAME) ){
 		cout << "Could not parse the live set file :" << ofToDataPath(FILENAME) << endl;
