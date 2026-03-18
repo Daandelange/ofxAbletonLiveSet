@@ -116,9 +116,9 @@ struct Track {
 	bool on;
 
 	// Todo: TrackGroupId
-	//TimeSignature timeSignature;
-	//Time startTime;
-	//Time endTime;
+	TimeSignature timeSignature;
+	Time startTime;
+	Time endTime;
 };
 
 struct MidiTrack : public Track {
