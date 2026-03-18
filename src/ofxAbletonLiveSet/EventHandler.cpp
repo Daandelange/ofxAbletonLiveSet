@@ -105,7 +105,7 @@ void EventHandler::fireNextTrackEvents(Time curTime){
 
 	// stopWatch.elapsed() is in milliseconds
 	// Track.time is in seconds
-	
+
 	while( const LSNoteEvent* newNote = getNextNote(curTime/1000000) ){
 		ofNotifyEvent( noteEvent, (const LSNoteEvent&)*newNote );
 	}
@@ -139,12 +139,15 @@ bool EventHandler::parseMetronomEvents(ofx::AbletonLiveSet::LiveSet &LS){
 	
 	// loop trough LS data
 	for (std::size_t trackNb = 0; trackNb < LS.miditracks.size(); trackNb++){
-		LSMetronomEvent LSE;
-		LSE.timeSignature = LS.miditracks[trackNb].timeSignature;
-		LSE.trackNb = trackNb;
-		LSE.bpm = LS.tempo.getGlobalTempo();
+		LSMetronomEvent LSE(LS.miditracks[trackNb].timeSignature, LS.tempo.getGlobalTempo(), trackNb);
+		//LSE.timeSignature = LS.miditracks[trackNb].timeSignature;
+		//LSE.trackNb = trackNb;
+		//LSE.bpm = LS.tempo.getGlobalTempo();
 		LSMetronomEvents.push_back(LSE);
 	}
+
+	// Todo: Loop trough audiotrack too ?
+
 	return true;
 }
 

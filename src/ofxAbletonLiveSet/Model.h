@@ -65,6 +65,9 @@ struct TimeSignature {
 	int denominator;
 	int pbm;
 	
+	TimeSignature() = default;
+	TimeSignature(const TimeSignature& _other) = default;
+	TimeSignature(TimeSignature&& _other) noexcept = default;
 };
 
 struct FileInfo {
@@ -158,28 +161,53 @@ struct LiveSet {
 	} abletonVersion;
 };
 
-// Below are called events for legacy compatibility, but they are more a `LSNoteData` (not only to be used with events)
+// Below are called `events` for legacy compatibility, but they are more a `LSNoteData` (not only to be used with events)
 struct LSNoteEvent {
-	LSNoteEvent(string _clipName, int _color, int _nthNote, int _nthNoteInClip, int _trackNb, Note _note) : clipName(_clipName), color(_color), nthNote(_nthNote), nthNoteInClip(_nthNoteInClip), trackNb(_trackNb), note(_note) {};
-	
+	LSNoteEvent(string _clipName, int _color, int _nthNote, int _nthNoteInClip, int _trackNb, Note _note, bool _firstTime=true) :
+		clipName(_clipName),
+		color(_color),
+		nthNote(_nthNote),
+		nthNoteInClip(_nthNoteInClip),
+		trackNb(_trackNb),
+		note(_note),
+		firstTime(_firstTime)
+	{};
 	string clipName;
 	int color;
 	int nthNote;
 	int nthNoteInClip;
 	int trackNb;
 	Note note;
+	mutable bool firstTime;
 };
 
+// Rename this to clip event ??
 struct LSTrackEvent {
-	LSTrackEvent(string _trackName, AudioClip _audioClip, int _nthTrack, int _nthClipInTrack) : audioClip(_audioClip), trackName(_trackName), nthTrack(_nthTrack), nthClipInTrack(_nthClipInTrack) {};
+	LSTrackEvent(string _trackName, const AudioClip& _audioClip, int _nthTrack, int _nthClipInTrack, bool _firstTime=true) :
+		trackName(_trackName),
+		nthTrack(_nthTrack),
+		nthClipInTrack(_nthClipInTrack),
+		audioClip(_audioClip),
+		firstTime(_firstTime)
+	{};
 	
 	string trackName;
 	int nthTrack;
 	int nthClipInTrack;
 	AudioClip audioClip;
+	mutable bool firstTime;
 };
 
 struct LSMetronomEvent {
+	LSMetronomEvent(const TimeSignature& _ts, int _bpm, int _trackNb, int _barTime=-1, float _realTime=-1, bool _isAccent=false) :
+		barTime(_barTime),
+		realTime(_realTime),
+		bpm(_bpm),
+		isAccent(_isAccent),
+		trackNb(_trackNb),
+		timeSignature(_ts)
+	{};
+
 	int barTime;
 	float realTime;
 	int bpm;

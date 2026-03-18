@@ -18,7 +18,7 @@ void Db::resetIndexes() {
 
 
 //
-bool Db::parseNotes( LiveSet& LS ){
+bool Db::parseNotes( const LiveSet& LS ){
 
 	// ALS loaded ?
 	if( !LS.isLoaded() ){
@@ -39,7 +39,7 @@ bool Db::parseNotes( LiveSet& LS ){
 			unsigned int clipColor = LS.miditracks[trackNb].clips[clipNb].color;
 			std::size_t nthInClip = 0;
 			
-			for( vector<Note>::iterator it=LS.miditracks[trackNb].clips[clipNb].notes.begin(); it != LS.miditracks[trackNb].clips[clipNb].notes.end(); it++ ){
+			for( vector<Note>::const_iterator it=LS.miditracks[trackNb].clips[clipNb].notes.cbegin(); it != LS.miditracks[trackNb].clips[clipNb].notes.cend(); it++ ){
 				
 				LSNoteEvent noteEvent( clipName, clipColor, nthNote, nthInClip, trackNb, *it );
 				
@@ -89,7 +89,7 @@ const LSTrackEvent* Db::getNextTrack( float curTime ){
 }
 
 //
-bool Db::parseTracks( LiveSet& LS ){
+bool Db::parseTracks( const LiveSet& LS ){
 	
 	// ALS loaded ?
 	if( !LS.isLoaded() ){

@@ -1,5 +1,22 @@
 #include "Parser.h"
 
+// Uncomment for testing exprimental windows gzip decompression.
+// Code is in C#, needs to be converted into c++.
+//#define OFX_ALS_EXPERIMENTAL_WINDOWS_GZIP_SUPPORT
+
+#if defined(TARGET_WIN32) && !defined(OFX_ALS_WITHOUT_POCO) && defined(OFX_ALS_EXPERIMENTAL_WINDOWS_GZIP_SUPPORT)
+// For gzip decompression, untested
+//using System;
+//using System.IO;
+//using System.IO.Compression;
+#include <vcclr.h> // Needed for working with managed objects in native C++
+#include <msclr/marshal_cppstd.h> // Needed for converting System::String to std::string
+#include <iostream>
+#include <fstream>
+#include <msclr/marshal_cppstd.h>
+#include <System.IO.Compression.GZipStream.h>
+#endif
+
 OFX_ALS_BEGIN_NAMESPACE
 
 // Ideas for more data to parse : GroupTrack, DeviceChain, Plugins info, etc.
@@ -10,6 +27,38 @@ OFX_ALS_BEGIN_NAMESPACE
 // Ableton 11 Compatibility notes:
 // - <ColorIndex> --> <Color>
 
+// Experimental Windows gzip support
+#if defined(TARGET_WIN32) && !defined(OFX_ALS_WITHOUT_POCO) && defined(OFX_ALS_EXPERIMENTAL_WINDOWS_GZIP_SUPPORT)
+using namespace System;
+using namespace System::IO::Compression;
+
+ofBuffer<char> DecompressGZipFile(const std::string& filePath) {
+    // Convert native string to managed System::String
+    System::String^ managedFilePath = msclr::interop::marshal_as<System::String^>(filePath);
+
+    // Open the input file stream
+    FileStream^ compressedFileStream = File::OpenRead(managedFilePath);
+
+    // Create a GZipStream to decompress the file
+    GZipStream^ decompressor = gcnew GZipStream(compressedFileStream, CompressionMode::Decompress);
+
+    // Create a MemoryStream to store the decompressed data
+    MemoryStream^ decompressedMemoryStream = gcnew MemoryStream();
+
+    // Copy the decompressed data from the GZipStream to the MemoryStream
+    decompressor->CopyTo(decompressedMemoryStream);
+
+    // Convert the managed MemoryStream to a native char vector
+    array<Byte>^ decompressedDataArray = decompressedMemoryStream->ToArray();
+    ofBuffer<char> decompressedData(decompressedDataArray->begin(), decompressedDataArray->end());
+
+    // Close the streams
+    decompressor->Close();
+    compressedFileStream->Close();
+
+    return decompressedData;
+}
+#endif
 
 bool Parser::open(const string& path, const bool relativeToDataFolder){
 	ifstream ifs;
@@ -41,10 +90,12 @@ bool Parser::open(const string& path, const bool relativeToDataFolder){
 		std::string absPath = relativeToDataFolder?ofToDataPath(path, true):path;
 		std::string xmlPath = absPath.substr(0, absPath.find_last_of(".")) + ".xml";
 #	if defined( TARGET_OSX ) || defined(TARGET_LINUX)
-		// osx/linux: gzip -kcd ./project.als > ./project.xml
+		// osx/linux: `gzip -kcd ./project.als > ./project.xml`
 		//		-k : keep original
 		//		-s : output to cout (output goes to file after)
 		//		-d : decompress
+		// osx/linux/windows alternative, not installed by default, on windows replace `7z` with `/path/to/7z.exe`
+		//		`7z e ./test.als -so > ./test.xml`
 		std::string cmd = std::string("gzip -kcd ") + absPath + " > " + xmlPath;
 		auto result = ofSystem(cmd);
 		if(result.size()==0){
@@ -63,11 +114,22 @@ bool Parser::open(const string& path, const bool relativeToDataFolder){
 			ofLogError("ofxAbletonLiveSet") << "Failed decompressing the ALS file via system call. Error: " << result;
 			return false;
 		}
+#	elif defined(TARGET_WIN32) && defined(OFX_ALS_EXPERIMENTAL_WINDOWS_GZIP_SUPPORT)
+		// Untested, provided for reference (c#)
+		//using FileStream compressedFileStream = File.Open(absPath, FileMode.Open);
+		//using FileStream outputFileStream = File.Create(xmlPath);
+		//using var decompressor = new GZipStream(compressedFileStream, CompressionMode.Decompress);
+		//decompressor.CopyTo(outputFileStream);
+		ofBuffer<char> buf = DecompressGZipFile(absPath);
+		if(!doc.load(buf, buf.size())){
+			ofLogNotice("ofxAbletonLiveSet") << "Couldn't load XML contents of file `" << path << "`. (special windows experimental method)";
+			return false;
+		}
 #	else
 		//<< " Please note that poco is disabled so decompressing ALS files is not supported.";
 		ofLogError("ofxAbletonLiveSet") << "The liveset is an `als` file, which means it's compressed. Decompressing isn't implemented on your platform when poco is disabled.";
 #	endif
-#endif
+#endif // no poco
 	}
 	else {
 		if(!doc.load(ifs)){
@@ -75,6 +137,7 @@ bool Parser::open(const string& path, const bool relativeToDataFolder){
 			return false;
 		}
 	}
+	try{
 	// parse it!
 	parseTempo(doc); // Important : pars tempo first, others might need it to convert to seconds
 	parseGeneralInfo(doc);
@@ -86,6 +149,16 @@ bool Parser::open(const string& path, const bool relativeToDataFolder){
 	LS.loadedFile=path;
 	LS.loadedFileIsRelative = relativeToDataFolder;
 
+	} catch(const std::exception& e) {
+		std::cout << "Catched! = " << e.what() << std::endl;
+		return false;
+	} catch(char const* e) {
+		std::cout << "Catched! = " << e << std::endl;
+		return false;
+	} catch( ... ) {
+		std::cout << "Catched!" << std::endl;
+		return false;
+	}
 	return true;
 }
 
@@ -149,7 +222,7 @@ void Parser::parseMidiTrack(const pugi::xml_document& doc){
 	
 	LS.miditracks.clear();
 	
-	for (int i = 0; i < nodes.size(); i++){
+	for (std::size_t i = 0; i < nodes.size(); i++){
 		MidiTrack MT;
 		parse(MT, nodes[i].node(), 0);
 		LS.miditracks.push_back(MT);
@@ -157,6 +230,7 @@ void Parser::parseMidiTrack(const pugi::xml_document& doc){
 }
 
 void Parser::parse(MidiTrack& MT, const pugi::xml_node &node, RealTime offset) {
+	// Todo: Track names are in fact 00-NAME, 00 being the layer index
 	MT.name = node.child("Name").child("EffectiveName").attribute("Value").value();
 	MT.color = node.child("ColorIndex").attribute("Value").as_uint();
 	
@@ -393,7 +467,7 @@ void Parser::parse(AudioClip& AC, const pugi::xml_node &node, RealTime offset){
 	AC.color = node.child("ColorIndex").attribute("Value").as_uint();
 	AC.name = node.child("Name").attribute("Value").value();
 	AC.annotation = node.child("Annotation").attribute("Value").value();
-	
+
 	// Sample information
 	parse(AC.file, node.child("SampleRef").child("FileRef"));
 
