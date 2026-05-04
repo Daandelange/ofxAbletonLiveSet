@@ -68,7 +68,7 @@ bool Parser::open(const string& path, const bool relativeToDataFolder){
 	pugi::xml_document doc;
 
 	// check extension ?
-	string extension = path.substr(path.find_last_of(".") + 1);
+	string extension = path.substr(path.find_last_of(".") + 1); // Fixme: can crash !
 	bool gzipped = false;
 
 	if( extension == "als" || extension == "ALS") {
@@ -139,7 +139,7 @@ bool Parser::open(const string& path, const bool relativeToDataFolder){
 	}
 	try{
 	// parse it!
-	parseTempo(doc); // Important : pars tempo first, others might need it to convert to seconds
+	parseTempo(doc); // Important : parse tempo first, others might need it to convert to seconds
 	parseGeneralInfo(doc);
 	parseMidiTrack(doc);
 	parseLocator(doc);

@@ -131,7 +131,7 @@ bool EventHandler::enableMetronomEvents(ofx::AbletonLiveSet::LiveSet &LS){
 bool EventHandler::parseMetronomEvents(ofx::AbletonLiveSet::LiveSet &LS){
 	
 	if( !LS.isLoaded() ){
-		ofLogNotice("OfxAbletonLiveSet::EventHandler::parseMetronomEvents()", "before parsing events, make sure to parse() a live set.");
+		ofLogNotice("OfxAbletonLiveSet::EventHandler::parseMetronomEvents()") << "before parsing events, make sure to parse() a live set.";
 		return false;
 	}
 	

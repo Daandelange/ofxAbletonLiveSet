@@ -22,7 +22,7 @@ bool Db::parseNotes( const LiveSet& LS ){
 
 	// ALS loaded ?
 	if( !LS.isLoaded() ){
-		ofLogNotice("OfxAbletonLiveSet::Db::parseNotes()", "before parsing events, make sure to parse() a live set.");
+		ofLogNotice("OfxAbletonLiveSet::Db::parseNotes()") << "Before parsing events, make sure to parse() a live set.";
 		return false;
 	}
 	
@@ -93,7 +93,7 @@ bool Db::parseTracks( const LiveSet& LS ){
 	
 	// ALS loaded ?
 	if( !LS.isLoaded() ){
-		ofLogNotice("OfxAbletonLiveSet::Db::parseTracks()", "before parsing events, make sure to parse() a live set.");
+		ofLogNotice("ofxAbletonLiveSet::Db::parseTracks()") << "Before parsing events, make sure to parse() a live set.";
 		return false;
 	}
 	

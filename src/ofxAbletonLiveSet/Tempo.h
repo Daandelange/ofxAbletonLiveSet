@@ -10,12 +10,12 @@ typedef float RealTime;
 
 class TempoException : public std::exception {
     public:
-        TempoException(char* _msg) : msg(_msg){};
-        virtual char * what () const noexcept override {
+        TempoException(const char* _msg) : msg(_msg){};
+        virtual const char * what () const noexcept override {
             return msg;
         }
     private:
-        char* msg;
+        const char* msg;
 };
 
 class Tempo {

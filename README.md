@@ -10,6 +10,7 @@ _Note: This plugin doesn't let you control Ableton via OSC. (use [ofxAbleton](ht
 ------
 
 ## Dependencies
+
 - (optional) ofxPoco for more precise event notification and zip decompression on all platforms.
 - If using OF < 0.10 you'll need to install [ofxPugiXml](http://github.com/bakercp/ofxPugiXML).
 
@@ -20,9 +21,11 @@ In your project or addon that uses ofxAbletonLiveSet, you can define the `OFX_AL
 To not break existing projects, ofxPoco is still enabled by default; but it's recommended to disable it if you don't need very precise real-time events.
 
 ## Usage
+
 Please refer to the __project examples__ for detailed information.  
 
 ###### Parse ALS file
+
 ````cpp
 ofxAbletonLiveSet::LiveSet LS;
 ofxAbletonLiveSet::Parser parser(LS);
@@ -31,6 +34,7 @@ parser.open("Project.als");
 ````
 
 ###### Events:
+
 ````cpp
 ofxAbletonLiveSet::EventHandler eventHandler;
 ofAddListener(ofx::AbletonLiveSet::EventHandler::noteEvent, this, &ofApp::noteEventListener);
@@ -43,6 +47,7 @@ void ofApp::noteEventListener(const ofx::AbletonLiveSet::LSNoteEvent & noteEvent
 
 
 _________
+
 ## Features  
 
 ofxAbletonLiveSet is divided into multiple blocks that you stack together to match your needs :  
@@ -53,11 +58,13 @@ ofxAbletonLiveSet is divided into multiple blocks that you stack together to mat
   5. _(Soon!)_ An ofxImGui helper to display the data.  
 
 ###### File Loading
+
 - `.als` files are compressed ZIP files. By default, ofxPoco is used to decompress the file contents to obtain the underlying XML tree.
 - ofxPoco can be disabled via a compilation flag and loading will use a system call to decompress the file (osx+linux only).
 - An alternatively is to load the project pre-decompressed. Rename `MyProject.als` to `.gz` and decompress it, then rename it to `MyProject.xml` which you can load.
 
 ###### Data Extraction
+
 - __Project__ (Name, Program Creator)
 - __MasterTrack__ (Bpm, Time Signature, Duration, Loop)
 - __MidiTrack__ (Name, MidiClips, Envelopes, MidiNotes, Color, Volume, etc.)
@@ -76,6 +83,7 @@ If poco is disabled, the events are fired using `ofThread` and `ofGetElapsedofGe
 ---------
 
 ## Not yet implemented
+
 - Some plugins carry floatEvents or boolEvents or enumEvents  
 - Some tracks can have WarpMarkers
 - Tempo Automation _(when the pbm changes)_ not yet supported
