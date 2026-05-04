@@ -1,8 +1,8 @@
 ofxAbletonLiveSet
 =================
 
-Ableton Live Set Project File parser.  
-Loads an `.als` (or `.xml`) Ableton Live set into useable OpenFrameworks variables.  
+Retro-engineered Ableton Live Set Project File parser powered by [PugiXML](https://github.com/zeux/pugixml/).  
+Loads an `.als` (or `.xml`) Ableton Live set into useable OpenFrameworks variables & events.  
 Useful for generating visuals that synchronise with audio.
 
 _Note: This plugin doesn't let you control Ableton via OSC. (use [ofxAbleton](https://github.com/tassock/ofxAbleton) or [ofxAbletonLive](http://github.com/genekogan/ofxAbletonLive) for that)_
