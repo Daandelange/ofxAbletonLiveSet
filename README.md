@@ -24,6 +24,13 @@ To not break existing projects, ofxPoco is still enabled by default; but it's re
 
 Please refer to the __project examples__ for detailed information.  
 
+###### ALS Support
+
+This plugin has been tested with ALS files produced by Ableton Live versions 10 and 11.  
+Version 9 should also still work. Ableton 12 is untested, please report back if you do so.
+
+Before importing projects, **it's important that you set the playback region** (`Transport`) to your total composition length, it's used to determine the duration.
+
 ###### Parse ALS file
 
 ````cpp

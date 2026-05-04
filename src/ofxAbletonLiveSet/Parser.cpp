@@ -1,5 +1,7 @@
 #include "Parser.h"
 
+#include <filesystem> // ALS 11 path parsing
+
 // Uncomment for testing exprimental windows gzip decompression.
 // Code is in C#, needs to be converted into c++.
 //#define OFX_ALS_EXPERIMENTAL_WINDOWS_GZIP_SUPPORT
@@ -179,6 +181,7 @@ void Parser::parseGeneralInfo(const pugi::xml_document &doc){
 	}
 
 	// Duration
+	// Note: this is not the document length, but the current playback position & loop region
 	pugi::xpath_query tq("//LiveSet/Transport");
 	if( pugi::xml_node transportNode = tq.evaluate_node(doc).node() ){
 		LS.loopDuration = LS.tempo.toRealTime(transportNode.child("LoopLength").attribute("Value").as_uint());
@@ -229,10 +232,17 @@ void Parser::parseMidiTrack(const pugi::xml_document& doc){
 	}
 }
 
+inline int parseColor(const pugi::xml_node &node){
+	pugi::xml_node cNode = node.child("ColorIndex");
+	if(!cNode) cNode = node.child("Color");
+	return cNode.attribute("Value").as_uint(-1);
+}
+
 void Parser::parse(MidiTrack& MT, const pugi::xml_node &node, RealTime offset) {
 	// Todo: Track names are in fact 00-NAME, 00 being the layer index
 	MT.name = node.child("Name").child("EffectiveName").attribute("Value").value();
-	MT.color = node.child("ColorIndex").attribute("Value").as_uint();
+	// MT.color = node.child("ColorIndex").attribute("Value").as_uint();
+	MT.color = parseColor(node);
 	
 	MT.on =
 		node.child("DeviceChain").child("Mixer").child("On").child("Manual").attribute("Value").as_bool() &&
@@ -278,7 +288,7 @@ void Parser::parse(MidiTrack& MT, const pugi::xml_node &node, RealTime offset) {
 		MT.clips.push_back(MC);
 	}
 	
-	std:sort(MT.clips.begin(), MT.clips.end(), sort_by_time<MidiClip>);
+	std::sort(MT.clips.begin(), MT.clips.end(), sort_by_time<MidiClip>);
 }
 
 void Parser::parse(Note& note, const pugi::xml_node &node, RealTime offset){
@@ -306,7 +316,8 @@ void Parser::parse(MidiClip& MC, const pugi::xml_node &node, RealTime offset){
 	MC.endtime = LS.tempo.toRealTime(end) + offset;
 	MC.duration = MC.endtime - MC.time;
 	
-	MC.color = node.child("ColorIndex").attribute("Value").as_int();
+	// MC.color = node.child("ColorIndex").attribute("Value").as_int();
+	MC.color = parseColor(node);
 	MC.name = node.child("Name").attribute("Value").value();
 	MC.annotation = node.child("Annotation").attribute("Value").value();
 	
@@ -420,7 +431,8 @@ void Parser::parseAudioTrack(const pugi::xml_document& doc){
 
 void Parser::parse(AudioTrack& AT, const pugi::xml_node &node, RealTime offset) {
 	AT.name = node.child("Name").child("EffectiveName").attribute("Value").value();
-	AT.color = node.child("ColorIndex").attribute("Value").as_uint();
+	// AT.color = node.child("ColorIndex").attribute("Value").as_uint();
+	AT.color = parseColor(node);
 
 	// AudioTrack/DeviceChain/Mixer/On/Manual[Value] && AudioTrack/DeviceChain/MainSequencer/On/Manual[Value]
 	AT.on =
@@ -454,7 +466,7 @@ void Parser::parse(AudioClip& AC, const pugi::xml_node &node, RealTime offset){
 	// /CurrentEnd
 	// /TimeSignature
 	// /Name
-	// /ColorIndex
+	// /ColorIndex (Ableton 10) or Color (Ableton 11)
 	
 	float start = node.child("CurrentStart").attribute("Value").as_float();
 	float end = node.child("CurrentEnd").attribute("Value").as_float();
@@ -464,7 +476,8 @@ void Parser::parse(AudioClip& AC, const pugi::xml_node &node, RealTime offset){
 	AC.endtime = LS.tempo.toRealTime(end) + offset;
 	AC.duration = AC.endtime - AC.time;
 	
-	AC.color = node.child("ColorIndex").attribute("Value").as_uint();
+	// AC.color = node.child("ColorIndex").attribute("Value").as_uint();
+	AC.color = parseColor(node);
 	AC.name = node.child("Name").attribute("Value").value();
 	AC.annotation = node.child("Annotation").attribute("Value").value();
 
@@ -478,13 +491,44 @@ void Parser::parse(AudioClip& AC, const pugi::xml_node &node, RealTime offset){
 
 // Supposes node is a <FileRef>
 void Parser::parse(FileInfo& F, const pugi::xml_node& node){
-	F.name = node.child("Name").attribute("Value").as_string();
-	F.size = node.child("SearchHint").child("FileSize").attribute("Value").as_uint();
-	if(pugi::xml_node relPathNode = node.child("RelativePath")){
-		F.relativePath = "";
-		for(auto pathElement : relPathNode.children("RelativePathElement")){
-			F.relativePath += pathElement.attribute("Dir").as_string();
+	// ALS 10 : SampleRef/FileRef/Name:Value
+	// ALS 11 : SampleRef/FileRef/RelativePath:Value
+	// ALS 11 : SampleRef/FileRef/OriginalFileSize:Value
+	pugi::xml_node relPathNode = node.child("RelativePath");
+	// Ableton 11
+	if(relPathNode){
+		//pugi::xml_node fsNode = node.child("OriginalFileSize");
+		F.relativePath = relPathNode.attribute("Value").as_string();
+		// v1
+#if 0
+		std::size_t fileNamePos = (F.relativePath.length()>1u)?F.relativePath.find_last_of("/", F.relativePath.npos-1u):F.relativePath.npos;
+		if(fileNamePos!=F.relativePath.npos){
+			F.name = F.relativePath.substr(fileNamePos);
+		}
+		F.size = node.child("OriginalFileSize").attribute("Value").as_uint();
+#else
+		// v2
+		if(F.relativePath.length()>1u){
+			std::filesystem::path p{ F.relativePath };
+			F.name = p.filename().string();
+			F.relativePath = p.parent_path().string();
+		}
+#endif
+		// Ensure tailing slash
+		if(F.relativePath.find_last_of("/") != F.relativePath.npos-1){
 			F.relativePath += "/";
+		}
+	}
+	// Ableton 9, 10
+	else {
+		F.name = node.child("Name").attribute("Value").as_string();
+		F.size = node.child("SearchHint").child("FileSize").attribute("Value").as_uint();
+		if(pugi::xml_node relPathNode = node.child("RelativePath")){
+			F.relativePath = "";
+			for(auto pathElement : relPathNode.children("RelativePathElement")){
+				F.relativePath += pathElement.attribute("Dir").as_string();
+				F.relativePath += "/";
+			}
 		}
 	}
 }
