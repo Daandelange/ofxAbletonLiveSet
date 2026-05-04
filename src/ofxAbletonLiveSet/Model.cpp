@@ -20,6 +20,7 @@ float Automation::getValueAt(float time) const {
 }
 
 // Data from & thanks to : https://github.com/elixirbeats/abletoolz/blob/8e3dab304ca1fe4344d7b662fc76e57ac4cd63ee/abletoolz/color_tools.py#L13-L19
+// More detailed data : https://github.com/danhemerlein/ableton-colors
 const int AbletonColorSwatch::Colors[70] = {
 	0xFF94A6, 0xFFA428, 0xCD9827, 0xF6F57C, 0xBEFA00, 0x21FF41, 0x25FEA9, 0x5DFFE9, 0x8AC5FE, 0x5480E4, 0x93A6FF, 0xD86CE4, 0xE552A1, 0xFFFEFE,
 	0xFE3637, 0xF66D02, 0x99734A, 0xFEF134, 0x87FF67, 0x3DC201, 0x01BEAF, 0x18E9FE, 0x10A4EE, 0x007DC0, 0x886CE4, 0xB776C6, 0xFE38D4, 0xD1D0D1,

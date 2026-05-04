@@ -32,14 +32,15 @@ bool Db::parseNotes( const LiveSet& LS ){
 	// loop trough LS data
 	for (std::size_t trackNb = 0; trackNb < LS.miditracks.size(); trackNb++){
 		std::size_t nthNote=0;
+		const MidiTrack& mt = LS.miditracks[trackNb];
 		
-		for(std::size_t clipNb=0; clipNb < LS.miditracks[trackNb].clips.size(); clipNb++){
-			
-			string clipName = LS.miditracks[trackNb].clips[clipNb].name;
-			unsigned int clipColor = LS.miditracks[trackNb].clips[clipNb].color;
+		for(std::size_t clipNb=0; clipNb < mt.clips.size(); clipNb++){
+			const MidiClip& mc = mt.clips[clipNb];
+			string clipName = mc.name;
+			unsigned int clipColor = mc.color;
 			std::size_t nthInClip = 0;
 			
-			for( vector<Note>::const_iterator it=LS.miditracks[trackNb].clips[clipNb].notes.cbegin(); it != LS.miditracks[trackNb].clips[clipNb].notes.cend(); it++ ){
+			for( vector<Note>::const_iterator it=mc.notes.cbegin(); it != mc.notes.cend(); it++ ){
 				
 				LSNoteEvent noteEvent( clipName, clipColor, nthNote, nthInClip, trackNb, *it );
 				

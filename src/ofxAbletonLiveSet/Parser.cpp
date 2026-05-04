@@ -343,7 +343,15 @@ void Parser::parse(MidiClip& MC, const pugi::xml_node &node, RealTime offset){
 				note.key = midi_key;
 				
 				parse(note, *it, MC.time);
-				MC.notes.push_back(note);
+
+				// Ignore out-of-clip notes
+				if(note.time < MC.time || note.time > MC.endtime){
+					//std::cout << " • Skipping Note out-of-clip `" << MC.name << "` ["<<  MC.time << " -> " << MC.endtime <<"], note=" << note.time << std::endl;
+					// continue;
+				}
+				else {
+					MC.notes.push_back(note);
+				}
 				
 				it++;
 			}
@@ -356,14 +364,16 @@ void Parser::parse(MidiClip& MC, const pugi::xml_node &node, RealTime offset){
 			vector<Note> loopNotes;
 			loopNotes.clear();
 			for(int i=0; i<MC.notes.size(); i++){
-				if(MC.notes[i].time >= MC.loop.start && MC.notes[i].time < MC.loop.end){
-					loopNotes.push_back(MC.notes[i]);
+				Note& n = MC.notes[i];
+				if(n.time >= MC.loop.start && n.time < MC.loop.end){
+					loopNotes.push_back(n);
 				}
 			}
 			
 			for(Time t=MC.loop.duration; t < MC.duration; t+=MC.loop.duration){
 				for(int i=0; i<loopNotes.size(); i++){
-					if(loopNotes[i].time < MC.endtime) MC.notes.push_back(loopNotes[i] + t);
+					Note nextNote = loopNotes[i] + t;
+					if(nextNote.time < MC.endtime) MC.notes.push_back(nextNote);
 				}
 			}
 			
