@@ -19,6 +19,8 @@ float Automation::getValueAt(float time) const {
 	return start->second + vd * (t / td);
 }
 
+const char* Note::NoteNames[12] = {"C","C#","D","D#","E","F","F#","G","G#","A","A#","B"};
+
 // Data from & thanks to : https://github.com/elixirbeats/abletoolz/blob/8e3dab304ca1fe4344d7b662fc76e57ac4cd63ee/abletoolz/color_tools.py#L13-L19
 // More detailed data : https://github.com/danhemerlein/ableton-colors
 const int AbletonColorSwatch::Colors[70] = {

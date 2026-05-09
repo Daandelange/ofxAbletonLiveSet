@@ -30,6 +30,24 @@ struct Note {
 	Note operator + (const Time& other) const{
 		return Note( time + other, duration, time, key);
 	}
+
+	inline int getOctave() const {
+		return (key / 12) - 1;
+	}
+
+	inline float getFrequency() const {
+		return 440.0f * pow(2.f, (key - 69) / 12.f);
+	}
+
+	inline int getPitchClass() const {
+		return ((key<0?-key:key) % 12);
+	}
+
+	inline const char*const getNoteName() const {
+		return NoteNames[getPitchClass()];
+	}
+
+	static const char* NoteNames[12];
 };
 
 struct AbletonColorSwatch {
@@ -114,6 +132,7 @@ struct Track {
 	int color;
 	Volume volume;
 	bool on;
+	int id;
 
 	// Todo: TrackGroupId
 	TimeSignature timeSignature;
@@ -122,7 +141,7 @@ struct Track {
 };
 
 struct MidiTrack : public Track {
-	TimeSignature timeSignature;
+	//TimeSignature timeSignature;
 	vector<MidiClip> clips;
 };
 

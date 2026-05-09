@@ -243,6 +243,7 @@ void Parser::parse(MidiTrack& MT, const pugi::xml_node &node, RealTime offset) {
 	MT.name = node.child("Name").child("EffectiveName").attribute("Value").value();
 	// MT.color = node.child("ColorIndex").attribute("Value").as_uint();
 	MT.color = parseColor(node);
+	MT.id = node.attribute("Id").as_int();// note: parses internal ID, not the "lane-id"
 	
 	MT.on =
 		node.child("DeviceChain").child("Mixer").child("On").child("Manual").attribute("Value").as_bool() &&
@@ -379,7 +380,7 @@ void Parser::parse(MidiClip& MC, const pugi::xml_node &node, RealTime offset){
 			
 		}
 		
-		std:sort(MC.notes.begin(), MC.notes.end(), sort_by_time<Note>);
+		std::sort(MC.notes.begin(), MC.notes.end(), sort_by_time<Note>);
 	}
 
 	{ // extract envelopes
@@ -443,6 +444,7 @@ void Parser::parse(AudioTrack& AT, const pugi::xml_node &node, RealTime offset) 
 	AT.name = node.child("Name").child("EffectiveName").attribute("Value").value();
 	// AT.color = node.child("ColorIndex").attribute("Value").as_uint();
 	AT.color = parseColor(node);
+	AT.id = node.attribute("Id").as_int();// note: parses internal ID, not the "lane-id"
 
 	// AudioTrack/DeviceChain/Mixer/On/Manual[Value] && AudioTrack/DeviceChain/MainSequencer/On/Manual[Value]
 	AT.on =
@@ -467,7 +469,7 @@ void Parser::parse(AudioTrack& AT, const pugi::xml_node &node, RealTime offset) 
 		AT.clips.push_back(AC);
 	}
 	
-	std:sort(AT.clips.begin(), AT.clips.end(), sort_by_time<AudioClip>);
+	std::sort(AT.clips.begin(), AT.clips.end(), sort_by_time<AudioClip>);
 }
 
 void Parser::parse(AudioClip& AC, const pugi::xml_node &node, RealTime offset){
@@ -583,7 +585,7 @@ void Parser::parseLocator(const pugi::xml_document& doc) {
 		LS.locators.push_back(L);
 	}
 	
-	std:sort(LS.locators.begin(), LS.locators.end(), sort_by_time<Locator>);
+	std::sort(LS.locators.begin(), LS.locators.end(), sort_by_time<Locator>);
 }
 
 void Parser::parse(Locator& L, const pugi::xml_node& node, RealTime offset){
