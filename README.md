@@ -91,6 +91,7 @@ If poco is disabled, the events are fired using `ofThread` and `ofGetElapsedofGe
 
 ## Not yet implemented
 
+- Parse tracks with groups
 - Some plugins carry floatEvents or boolEvents or enumEvents  
 - Some tracks can have WarpMarkers
 - Tempo Automation _(when the pbm changes)_ not yet supported
