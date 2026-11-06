@@ -1,6 +1,7 @@
 #include "Parser.h"
 
 #include <filesystem> // ALS 11 path parsing
+#include <fstream>
 
 // Uncomment for testing exprimental windows gzip decompression.
 // Code is in C#, needs to be converted into c++.
@@ -63,7 +64,7 @@ ofBuffer<char> DecompressGZipFile(const std::string& filePath) {
 #endif
 
 bool Parser::open(const string& path, const bool relativeToDataFolder){
-	ifstream ifs;
+	std::ifstream ifs;
 	ifs.open(relativeToDataFolder?ofToDataPath(path).c_str():path.c_str());
 	if (!ifs) return false;
 	
